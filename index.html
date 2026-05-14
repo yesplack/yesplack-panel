@@ -1704,36 +1704,47 @@ const RESULTADO_COLORS = {
 
 async function openCallsReport(){
   document.getElementById('calls-report-ov').classList.add('open');
-  document.getElementById('rep-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--tx3);font-family:var(--mo)"><span class="spin"></span>Cargando logs…</td></tr>`;
+  document.getElementById('rep-summary').textContent='Cargando…';
+  document.getElementById('rep-tbody').innerHTML='';
+  document.getElementById('rep-stats').innerHTML='';
   document.getElementById('rep-empty').style.display='none';
-
-  // Load logs (has internal timeout, always resolves)
-  if(!callLogsLoaded) await loadCallLogs();
-
-  // Build flat enriched list
-  reportLogs=[];
-  Object.entries(callLogs).forEach(([clientId,logs])=>{
-    const row=ROWS.find(r=>r[0]===clientId);
-    const clientName=row?row[1]:clientId;
-    logs.forEach(log=>{
-      reportLogs.push({...log, clientName, clientId});
-    });
-  });
-  // Sort by date descending
-  reportLogs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-
-  // Populate operador filter
-  const ops=[...new Set(reportLogs.map(l=>l.operador).filter(Boolean))].sort();
-  const opSel=document.getElementById('rep-operador');
-  opSel.innerHTML='<option value="">Todos</option>';
-  ops.forEach(op=>{const o=document.createElement('option');o.value=op;o.textContent=op;opSel.appendChild(o);});
-
-  // Clear date filters
+  // Clear filters
   document.getElementById('rep-desde').value='';
   document.getElementById('rep-hasta').value='';
   document.getElementById('rep-resultado').value='';
+  document.getElementById('rep-operador').innerHTML='<option value="">Todos</option>';
 
-  filterReport();
+  try{
+    const {data,error}=await db.from('call_logs')
+      .select('client_id,resultado,observaciones,proximo_paso,operador,created_at')
+      .order('created_at',{ascending:false})
+      .limit(5000);
+    if(error)throw error;
+    // Update cache
+    callLogs={};
+    (data||[]).forEach(log=>{
+      if(!callLogs[log.client_id])callLogs[log.client_id]=[];
+      callLogs[log.client_id].push(log);
+    });
+    callLogsLoaded=true;
+    // Build flat list with client names
+    reportLogs=[];
+    Object.entries(callLogs).forEach(([clientId,logs])=>{
+      const row=ROWS.find(r=>r[0]===clientId);
+      const clientName=row?row[1]:clientId;
+      logs.forEach(log=>reportLogs.push({...log,clientName,clientId}));
+    });
+    reportLogs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    // Populate operador filter
+    const ops=[...new Set(reportLogs.map(l=>l.operador).filter(Boolean))].sort();
+    const opSel=document.getElementById('rep-operador');
+    opSel.innerHTML='<option value="">Todos</option>';
+    ops.forEach(op=>{const o=document.createElement('option');o.value=op;o.textContent=op;opSel.appendChild(o);});
+    filterReport();
+  }catch(e){
+    document.getElementById('rep-summary').textContent='Error: '+e.message;
+    document.getElementById('rep-tbody').innerHTML=`<tr><td colspan="6" style="color:var(--rd);padding:20px;text-align:center;font-size:12px">${e.message}</td></tr>`;
+  }
 }
 
 function clearReportFilters(){
