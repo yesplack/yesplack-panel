@@ -199,6 +199,43 @@ td:last-child{border-right:none}
 .log-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:3px;padding:1px 5px;font-size:9px;font-family:var(--mo);color:#60a5fa;white-space:nowrap;cursor:pointer}
 .log-badge:hover{background:rgba(59,130,246,.25)}
 .cbtn.locked{background:rgba(34,197,94,.08);color:var(--tx3);border:1px solid rgba(34,197,94,.15);cursor:not-allowed}
+
+@media(max-width:768px){
+  .hdr{padding:6px 10px;gap:6px}
+  .h-right{gap:4px;flex-wrap:wrap}
+  .logo-tx{font-size:13px}
+  .logo-sb{display:none}
+  .tabs{gap:1px;padding:2px}
+  .tab{padding:4px 7px;font-size:9px;letter-spacing:0}
+  .pill{display:none}
+  .btn-out{padding:3px 7px;font-size:9px}
+  .user-btn{padding:3px 7px;font-size:9px;max-width:90px;overflow:hidden;text-overflow:ellipsis}
+  .conn-pill{display:none}
+  #user-menu{right:0;min-width:140px}
+  .fbar{padding:8px 10px;gap:6px}
+  .fi{width:100%!important}
+  .fs{min-width:0!important;width:100%!important}
+  .fg{width:calc(50% - 3px)}
+  .fg:last-child{width:100%}
+  .twrap{padding:0 4px 16px}
+  table{min-width:600px}
+  .rbar{padding:5px 10px}
+  .admin-wrap{padding:12px}
+  .utbl{font-size:11px}
+  .utbl th,.utbl td{padding:6px 8px}
+  .sw{padding:12px}
+  .sgrid{grid-template-columns:1fr 1fr}
+  #stats-ch{grid-template-columns:1fr!important}
+  .modal{width:95vw!important;padding:16px}
+  .mrow{flex-direction:column;gap:0}
+  .login-box{width:92vw;padding:24px 20px}
+}
+@media(max-width:480px){
+  .fg{width:100%}
+  .sgrid{grid-template-columns:1fr}
+  .hdr{flex-wrap:nowrap}
+  .tabs .tab{font-size:8px;padding:3px 5px}
+}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -311,7 +348,8 @@ td:last-child{border-right:none}
       <button class="tab on" onclick="switchView('lista',this)">Lista</button>
       <button class="tab" onclick="switchView('stats',this)">Stats</button>
       <button class="tab adm" id="admin-tab" style="display:none" onclick="switchView('admin',this)">Usuarios</button>
-      <button class="tab adm" id="tpl-tab" style="display:none" onclick="switchView('template',this)">✉ Template email</button>
+      <button class="tab adm" id="tpl-tab" style="display:none" onclick="switchView('template',this)">✉ Email</button>
+      <button class="tab adm" id="wsp-tab" style="display:none" onclick="switchView('wsp',this)">💬 WhatsApp</button>
       <button class="tab adm" id="newcli-tab" style="display:none" onclick="switchView('newcli',this)">+ Nuevo cliente</button>
     </div>
     <div class="pill">Total: <span id="total-c">0</span></div>
@@ -619,6 +657,43 @@ td:last-child{border-right:none}
   </div>
 </div>
 
+
+<!-- VIEW: WHATSAPP TEMPLATE -->
+<div id="view-wsp" class="view">
+  <div style="padding:20px;max-width:680px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:16px;font-weight:700">💬 Template de WhatsApp</div>
+      <button class="btn" onclick="saveWspTemplate()">Guardar template</button>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px">
+      <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Variables disponibles</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span onclick="insertWspVar('{NOMBRE}')" style="background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--mo);color:#25d366;cursor:pointer">{NOMBRE}</span>
+        <span onclick="insertWspVar('{EMPRESA}')" style="background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--mo);color:#25d366;cursor:pointer">{EMPRESA}</span>
+        <span onclick="insertWspVar('{TELEFONO}')" style="background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:4px;padding:2px 8px;font-size:11px;font-family:var(--mo);color:#25d366;cursor:pointer">{TELEFONO}</span>
+        <span style="font-size:11px;color:var(--tx3);align-self:center">— clic para insertar</span>
+      </div>
+    </div>
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px">
+      <div style="margin-bottom:12px">
+        <label style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;display:block;margin-bottom:6px">Mensaje</label>
+        <textarea id="wsp-body" rows="10"
+          style="width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;color:var(--tx);padding:10px 12px;font-size:13px;font-family:var(--sa);outline:none;resize:vertical;line-height:1.6;transition:border-color .2s"
+          onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--bd)'"
+          placeholder="Hola {NOMBRE}, te contacto desde Yesplack..."></textarea>
+      </div>
+      <!-- Preview -->
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--bd)">
+        <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Vista previa</div>
+        <div style="background:#0a3d2b;border-radius:8px;padding:12px 14px;font-size:13px;color:#e9fde0;line-height:1.6;white-space:pre-wrap;font-family:var(--sa)" id="wsp-preview">—</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--tx3);font-style:italic">
+      ℹ️ Al hacer clic en 💬 se abrirá WhatsApp Web con este mensaje precargado y las variables reemplazadas.
+    </div>
+  </div>
+</div>
+
 <!-- VIEW: TEMPLATE EMAIL -->
 <div id="view-template" class="view">
   <div style="padding:20px;max-width:780px">
@@ -728,7 +803,7 @@ async function doLogin(){
     document.getElementById('user-btn').textContent='👤 '+(data.display_name||data.username);
     // Show tabs based on role
 if(can('manageUsers'))document.getElementById('admin-tab').style.display='';
-if(can('editTemplate'))document.getElementById('tpl-tab').style.display='';
+if(can('editTemplate')){document.getElementById('tpl-tab').style.display='';document.getElementById('wsp-tab').style.display='';}
 if(can('createClients'))document.getElementById('newcli-tab').style.display='';
 if(currentRole==='maestro'){const rb=document.getElementById('reset-btn');if(rb)rb.style.display='';}
     initApp();
@@ -742,7 +817,7 @@ function doLogout(){
   document.getElementById('l-pass').value='';
   document.getElementById('l-err').textContent='';
   document.getElementById('l-btn').disabled=false;document.getElementById('l-btn').textContent='Entrar';
-  document.getElementById('admin-tab').style.display='none';document.getElementById('tpl-tab').style.display='none';document.getElementById('newcli-tab').style.display='none';
+  document.getElementById('admin-tab').style.display='none';document.getElementById('tpl-tab').style.display='none';document.getElementById('wsp-tab').style.display='none';document.getElementById('newcli-tab').style.display='none';
   document.getElementById('user-btn').textContent='👤 —';
   // Switch to lista tab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
@@ -765,6 +840,7 @@ async function initApp(){
   populateFilters();
   // Load in parallel but don't let one failure block the rest
   const loads=[loadStates(), loadTemplate(), loadMySignature(), loadNewClients()];
+  loads.push(loadWspTemplate());
   await Promise.allSettled(loads);
   // Call logs load lazily on first click
   subscribeRT();
@@ -940,7 +1016,7 @@ function render(){
     const tr=(r[3]||'').replace(/\D/g,'');
     const wa=tr?(tr.startsWith('54')?tr:'54'+tr.replace(/^0/,'')):'';
     const tD=r[3]?`<a style="color:var(--gr);text-decoration:none;font-family:var(--mo);font-size:11px;vertical-align:middle" href="tel:${r[3]}">${r[3]}</a>`:`<span class="no-d">sin tel.</span>`;
-    const wB=tr?`<a class="ib ib-w" href="https://wa.me/${wa}" target="_blank" title="WhatsApp">💬</a>`:'';
+    const wB=tr?`<a class="ib ib-w" href="${buildWspUrl(r[1],r[3],r[1])}" target="_blank" title="WhatsApp">💬</a>`:'';
     const mB=r[4]?`<button class="ib ib-m" onclick="openGmailBtn(this)" data-name="${r[1].replace(/"/g,'&quot;')}" data-email="${r[4].replace(/"/g,'&quot;')}" title="Abrir Gmail con template">✉</button>`:'';;
     const eD=r[4]?`<a style="color:var(--bl);text-decoration:none;font-size:10px;vertical-align:middle;max-width:110px;overflow:hidden;text-overflow:ellipsis;display:inline-block" href="mailto:${r[4]}" title="${r[4]}">${r[4]}</a>`:`<span class="no-d">—</span>`;
     const ct=r[5]?` <span style="color:var(--tx3);font-size:9px">(${r[5]})</span>`:'';
@@ -1072,6 +1148,7 @@ function switchView(v,btn){
   if(v==='stats')renderStats();
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='template')initTemplateEditor();
+  if(v==='wsp')initWspEditor();
   if(v==='newcli')initNewCliForm();
 }
 
@@ -1898,6 +1975,69 @@ async function confirmReset(){
     hideResetPanel();
     showToast(`✓ Reinicio completado — ${clientIds.length} clientes reiniciados`);
   }catch(e){showToast('Error en reinicio: '+e.message,'err');}
+}
+
+
+// ── WHATSAPP TEMPLATE ──
+let wspTemplate = {body:'Hola {NOMBRE}, te contacto desde Yesplack — Centro de la Construcción en Seco. Me gustaría presentarte nuestros productos y servicios. ¿Tenés un momento?'};
+
+async function loadWspTemplate(){
+  try{
+    const {data}=await db.from('wsp_template').select('*').eq('id','default').maybeSingle();
+    if(data&&data.body)wspTemplate={body:data.body};
+  }catch(e){console.warn('WSP template load:',e);}
+}
+
+function initWspEditor(){
+  const ta=document.getElementById('wsp-body');
+  ta.value=wspTemplate.body||'';
+  ta.oninput=updateWspPreview;
+  updateWspPreview();
+}
+
+function updateWspPreview(){
+  const txt=(document.getElementById('wsp-body').value||'')
+    .replace(/{NOMBRE}/g,'Juan García')
+    .replace(/{EMPRESA}/g,'Constructora Ejemplo SA')
+    .replace(/{TELEFONO}/g,'011 4123-4567');
+  document.getElementById('wsp-preview').textContent=txt||'—';
+}
+
+function insertWspVar(v){
+  const ta=document.getElementById('wsp-body');
+  const start=ta.selectionStart,end=ta.selectionEnd;
+  ta.value=ta.value.slice(0,start)+v+ta.value.slice(end);
+  ta.selectionStart=ta.selectionEnd=start+v.length;
+  ta.focus();
+  updateWspPreview();
+}
+
+async function saveWspTemplate(){
+  const body=document.getElementById('wsp-body').value.trim();
+  try{
+    const {data:existing}=await db.from('wsp_template').select('id').eq('id','default').maybeSingle();
+    let err;
+    if(existing){
+      const r=await db.from('wsp_template').update({body,updated_at:new Date().toISOString()}).eq('id','default');
+      err=r.error;
+    }else{
+      const r=await db.from('wsp_template').insert({id:'default',body,updated_at:new Date().toISOString()});
+      err=r.error;
+    }
+    if(err)throw err;
+    wspTemplate={body};
+    showToast('✓ Template de WhatsApp guardado');
+  }catch(e){showToast('Error: '+e.message,'err');}
+}
+
+function buildWspUrl(clientName,clientPhone,companyName){
+  const raw=(clientPhone||'').replace(/\D/g,'');
+  const intl=raw?(raw.startsWith('54')?raw:'54'+raw.replace(/^0/,'')):'';
+  const msg=(wspTemplate.body||'Hola {NOMBRE}')
+    .replace(/{NOMBRE}/g,clientName)
+    .replace(/{EMPRESA}/g,companyName||clientName)
+    .replace(/{TELEFONO}/g,clientPhone||'');
+  return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
 }
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
