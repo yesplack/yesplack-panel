@@ -1576,6 +1576,15 @@ async function toggleCall(id,btn){
     const clientRow=ROWS.find(r=>r[0]===id);
     const name=clientRow?clientRow[1]:id;
     if(!confirm('⚠️ Revertir llamado de: '+name+'\n\nEsto desmarca el cliente. Los logs quedan en el historial.'))return;
+    // Execute the unmark and exit
+    delete called[id];
+    btn.className='cbtn pend';btn.textContent='☎ Llamar';
+    const rowEl=document.getElementById('row-'+id);
+    if(rowEl)rowEl.classList.remove('called');
+    updateStats();
+    upsertState(id,{called:false});
+    showToast('✓ Llamado revertido — historial conservado');
+    return;
   }
   
   // If already called but NO log → allow free unmark
