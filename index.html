@@ -1535,28 +1535,24 @@ let callLogs = {}; // clientId → array of logs
 let callLogsLoaded=false;
 async function loadCallLogs(){
   if(callLogsLoaded)return;
+  callLogsLoaded=true; // prevent duplicate calls
+  callLogs={};
   try{
-    const result=await Promise.race([
-      db.from('call_logs').select('*').order('created_at',{ascending:false}),
-      new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout')),8000))
-    ]);
-    const {data,error}=result;
-    if(error)throw error;
-    callLogs={};
-    (data||[]).forEach(log=>{
+    const rows=await new Promise((resolve)=>{
+      let done=false;
+      const timer=setTimeout(()=>{if(!done){done=true;resolve([]);}},6000);
+      db.from('call_logs').select('client_id,resultado,observaciones,proximo_paso,operador,created_at')
+        .order('created_at',{ascending:false})
+        .then(({data,error})=>{
+          if(!done){done=true;clearTimeout(timer);resolve(error?[]:data||[]);}
+        })
+        .catch(()=>{if(!done){done=true;clearTimeout(timer);resolve([]);}});
+    });
+    rows.forEach(log=>{
       if(!callLogs[log.client_id])callLogs[log.client_id]=[];
       callLogs[log.client_id].push(log);
     });
-    callLogsLoaded=true;
-  }catch(e){
-    callLogsLoaded=true; // mark as loaded even on error to avoid infinite retry
-    callLogs={};
-    console.warn('loadCallLogs error:',e.message);
-    if(e.message==='Timeout'||e.message?.includes('does not exist')){
-      // Table might not exist yet — silently continue
-      return;
-    }
-  }
+  }catch(e){console.warn('loadCallLogs:',e);}
 }
 
 function hasLog(clientId){
@@ -1711,10 +1707,8 @@ async function openCallsReport(){
   document.getElementById('rep-tbody').innerHTML=`<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--tx3);font-family:var(--mo)"><span class="spin"></span>Cargando logs…</td></tr>`;
   document.getElementById('rep-empty').style.display='none';
 
-  // Load logs if not yet loaded
-  try{
-    if(!callLogsLoaded) await loadCallLogs();
-  }catch(e){console.warn('log load error',e);}
+  // Load logs (has internal timeout, always resolves)
+  if(!callLogsLoaded) await loadCallLogs();
 
   // Build flat enriched list
   reportLogs=[];
