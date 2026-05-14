@@ -236,6 +236,22 @@ td:last-child{border-right:none}
   .hdr{flex-wrap:nowrap}
   .tabs .tab{font-size:8px;padding:3px 5px}
 }
+
+.tpl-cards-panel{width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
+.tpl-card{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;transition:border-color .2s;cursor:pointer}
+.tpl-card:hover{border-color:var(--ac)}
+.tpl-card-name{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tpl-card-preview{font-size:11px;color:var(--tx3);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.5;margin-bottom:8px}
+.tpl-card-footer{display:flex;align-items:center;justify-content:space-between}
+.tpl-card-date{font-size:10px;font-family:var(--mo);color:var(--tx3)}
+.tpl-card-actions{display:flex;gap:5px}
+.tpl-editor-wrap{display:flex;gap:16px;align-items:flex-start}
+.tpl-editor-main{flex:1;min-width:0}
+.tpl-sidebar-title{font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+@media(max-width:900px){
+  .tpl-editor-wrap{flex-direction:column}
+  .tpl-cards-panel{width:100%}
+}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -663,8 +679,13 @@ td:last-child{border-right:none}
   <div style="padding:20px;max-width:680px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div style="font-size:16px;font-weight:700">💬 Template de WhatsApp</div>
-      <button class="btn" onclick="saveWspTemplate()">Guardar template</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-g" onclick="saveAsNamedTemplate('wsp')">💾 Guardar como plantilla</button>
+        <button class="btn" onclick="saveWspTemplate()">✓ Usar este template</button>
+      </div>
     </div>
+    <div class="tpl-editor-wrap">
+    <div class="tpl-editor-main">
     <div style="background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px">
       <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Variables disponibles</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -691,6 +712,17 @@ td:last-child{border-right:none}
     <div style="margin-top:10px;font-size:11px;color:var(--tx3);font-style:italic">
       ℹ️ Al hacer clic en 💬 se abrirá WhatsApp Web con este mensaje precargado y las variables reemplazadas.
     </div>
+    </div><!-- end tpl-editor-main -->
+    <div class="tpl-cards-panel">
+      <div class="tpl-sidebar-title">
+        <span>Plantillas guardadas</span>
+        <span id="wsp-tpl-count" style="color:#25d366;font-weight:600"></span>
+      </div>
+      <div id="wsp-tpl-cards" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto">
+        <div style="color:var(--tx3);font-size:12px;text-align:center;padding:20px">Cargando…</div>
+      </div>
+    </div>
+    </div><!-- end tpl-editor-wrap -->
   </div>
 </div>
 
@@ -1147,8 +1179,8 @@ function switchView(v,btn){
   btn.classList.add('on');
   if(v==='stats')renderStats();
   if(v==='admin'&&can('manageUsers'))loadUsers();
-  if(v==='template')initTemplateEditor();
-  if(v==='wsp')initWspEditor();
+  if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
+  if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
   if(v==='newcli')initNewCliForm();
 }
 
@@ -2038,6 +2070,95 @@ function buildWspUrl(clientName,clientPhone,companyName){
     .replace(/{EMPRESA}/g,companyName||clientName)
     .replace(/{TELEFONO}/g,clientPhone||'');
   return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
+}
+
+
+// ── TEMPLATE LIBRARY ──
+let tplLibrary = {email:[], wsp:[]};
+
+async function loadTemplateLibrary(type){
+  try{
+    const {data,error}=await db.from('templates_library')
+      .select('*').eq('type',type).order('created_at',{ascending:false});
+    if(error)throw error;
+    tplLibrary[type]=data||[];
+  }catch(e){tplLibrary[type]=[];console.warn('Library load:',e);}
+  renderTemplateCards(type);
+}
+
+function renderTemplateCards(type){
+  const container=document.getElementById(type+'-tpl-cards');
+  const countEl=document.getElementById(type+'-tpl-count');
+  if(!container)return;
+  const cards=tplLibrary[type];
+  if(countEl)countEl.textContent=cards.length?`(${cards.length})`:'';
+  if(!cards.length){
+    container.innerHTML=`<div style="color:var(--tx3);font-size:12px;text-align:center;padding:30px;line-height:1.6">
+      Sin plantillas guardadas.<br><span style="font-size:10px">Editá un template y usá<br>"💾 Guardar como plantilla".</span></div>`;
+    return;
+  }
+  const accentColor=type==='wsp'?'#25d366':'var(--ac)';
+  container.innerHTML=cards.map(c=>{
+    const preview=type==='email'
+      ? (c.body_html?c.body_html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,80):'')
+      : (c.body||'').slice(0,80);
+    const date=new Date(c.created_at).toLocaleDateString('es',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    return `<div class="tpl-card" onclick="loadNamedTemplate('${c.id}','${type}')">
+      <div class="tpl-card-name" title="${c.name||''}">${c.name||'Sin nombre'}</div>
+      <div class="tpl-card-preview">${preview||'(sin contenido)'}</div>
+      <div class="tpl-card-footer">
+        <div class="tpl-card-date">${date}</div>
+        <div class="tpl-card-actions" onclick="event.stopPropagation()">
+          <button class="bsm be" onclick="loadNamedTemplate('${c.id}','${type}')">Cargar</button>
+          <button class="bsm bd" onclick="deleteNamedTemplate('${c.id}','${type}')">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveAsNamedTemplate(type){
+  const name=prompt('Nombre de la plantilla:','');
+  if(!name||!name.trim())return;
+  let payload={type,name:name.trim(),created_at:new Date().toISOString()};
+  if(type==='email'){
+    payload.subject=document.getElementById('tpl-subject').value.trim();
+    payload.body_html=document.getElementById('tpl-body').innerHTML;
+    payload.cc=document.getElementById('tpl-cc').value.trim();
+  } else {
+    payload.body=document.getElementById('wsp-body').value.trim();
+  }
+  try{
+    const {error}=await db.from('templates_library').insert(payload);
+    if(error)throw error;
+    showToast('✓ Plantilla "'+name.trim()+'" guardada');
+    await loadTemplateLibrary(type);
+  }catch(e){showToast('Error: '+e.message,'err');}
+}
+
+async function loadNamedTemplate(id,type){
+  const card=tplLibrary[type].find(c=>c.id===id);
+  if(!card)return;
+  if(type==='email'){
+    if(card.subject)document.getElementById('tpl-subject').value=card.subject;
+    if(card.body_html)document.getElementById('tpl-body').innerHTML=card.body_html;
+    if(card.cc!==undefined)document.getElementById('tpl-cc').value=card.cc||'';
+  } else {
+    if(card.body)document.getElementById('wsp-body').value=card.body;
+    updateWspPreview();
+  }
+  showToast('✓ Plantilla "'+card.name+'" cargada en el editor');
+}
+
+async function deleteNamedTemplate(id,type){
+  const card=tplLibrary[type].find(c=>c.id===id);
+  if(!confirm('¿Eliminar la plantilla "'+(card?.name||id)+'"?'))return;
+  try{
+    const {error}=await db.from('templates_library').delete().eq('id',id);
+    if(error)throw error;
+    showToast('Plantilla eliminada');
+    await loadTemplateLibrary(type);
+  }catch(e){showToast('Error: '+e.message,'err');}
 }
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
