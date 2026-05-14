@@ -385,7 +385,21 @@ td:last-child{border-right:none}
   <div class="admin-wrap">
     <div class="admin-hdr">
       <div class="admin-title">⚙️ Gestión de Usuarios</div>
-      <button class="btn" onclick="openNewUserModal()">+ Nuevo usuario</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-g" id="reset-btn" style="display:none;border-color:rgba(239,68,68,.4);color:var(--rd)" onclick="showResetPanel()">🔄 Reiniciar llamados</button>
+        <button class="btn" onclick="openNewUserModal()">+ Nuevo usuario</button>
+      </div>
+    </div>
+    <div id="reset-panel" style="display:none;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:600;color:var(--rd);margin-bottom:8px">⚠️ Reinicio de contadores</div>
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:12px;line-height:1.6">Marca todos los clientes como <strong>no llamados</strong>. Los logs de historial se conservan en Supabase.</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select class="fs" id="reset-vendedor" style="min-width:180px">
+          <option value="">Todos los vendedores</option>
+        </select>
+        <button class="btn" style="background:var(--rd)" onclick="confirmReset()">Confirmar reinicio</button>
+        <button class="btn-g" onclick="hideResetPanel()">Cancelar</button>
+      </div>
     </div>
     <div id="users-list"><div style="text-align:center;padding:30px;color:var(--tx3);font-family:var(--mo)"><span class="spin"></span>Cargando…</div></div>
   </div>
@@ -716,6 +730,7 @@ async function doLogin(){
 if(can('manageUsers'))document.getElementById('admin-tab').style.display='';
 if(can('editTemplate'))document.getElementById('tpl-tab').style.display='';
 if(can('createClients'))document.getElementById('newcli-tab').style.display='';
+if(currentRole==='maestro'){const rb=document.getElementById('reset-btn');if(rb)rb.style.display='';}
     initApp();
   }catch(e){err.textContent='Error: '+e.message;btn.disabled=false;btn.textContent='Entrar';}
 }
@@ -1521,7 +1536,11 @@ let callLogsLoaded=false;
 async function loadCallLogs(){
   if(callLogsLoaded)return;
   try{
-    const {data,error}=await db.from('call_logs').select('*').order('created_at',{ascending:false});
+    const result=await Promise.race([
+      db.from('call_logs').select('*').order('created_at',{ascending:false}),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout')),8000))
+    ]);
+    const {data,error}=result;
     if(error)throw error;
     callLogs={};
     (data||[]).forEach(log=>{
@@ -1529,7 +1548,15 @@ async function loadCallLogs(){
       callLogs[log.client_id].push(log);
     });
     callLogsLoaded=true;
-  }catch(e){console.warn('loadCallLogs:',e);}
+  }catch(e){
+    callLogsLoaded=true; // mark as loaded even on error to avoid infinite retry
+    callLogs={};
+    console.warn('loadCallLogs error:',e.message);
+    if(e.message==='Timeout'||e.message?.includes('does not exist')){
+      // Table might not exist yet — silently continue
+      return;
+    }
+  }
 }
 
 function hasLog(clientId){
@@ -1685,7 +1712,9 @@ async function openCallsReport(){
   document.getElementById('rep-empty').style.display='none';
 
   // Load logs if not yet loaded
-  if(!callLogsLoaded) await loadCallLogs();
+  try{
+    if(!callLogsLoaded) await loadCallLogs();
+  }catch(e){console.warn('log load error',e);}
 
   // Build flat enriched list
   reportLogs=[];
@@ -1800,6 +1829,55 @@ function exportCallsCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='reporte_llamados.csv';a.click();
   showToast('✓ CSV descargado');
+}
+
+
+// ── RESET COUNTERS (maestro only) ──
+function showResetPanel(){
+  const panel=document.getElementById('reset-panel');
+  panel.style.display='block';
+  // Populate vendedor selector
+  const sel=document.getElementById('reset-vendedor');
+  sel.innerHTML='<option value="">Todos los vendedores</option>';
+  RAW.vendedores.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+}
+function hideResetPanel(){document.getElementById('reset-panel').style.display='none';}
+
+async function confirmReset(){
+  const vend=document.getElementById('reset-vendedor').value;
+  const scope=vend?`al vendedor "${vend}"`:'a TODOS los vendedores';
+  if(!confirm(`¿Reiniciar los llamados de ${scope}?\n\nEsto marca todos esos clientes como no llamados.\nLos logs de historial se conservan.`))return;
+  
+  try{
+    // Get client IDs to reset
+    let clientIds;
+    if(vend){
+      clientIds=ROWS.filter(r=>r[9]===vend).map(r=>r[0]);
+    } else {
+      clientIds=Object.keys(called).filter(k=>called[k]);
+    }
+    
+    if(clientIds.length===0){showToast('No hay llamados para reiniciar','err');return;}
+    
+    // Update Supabase: set called=false for affected clients
+    const {error}=await db.from('client_states')
+      .update({called:false,updated_by:currentUser.display_name||currentUser.username,updated_at:new Date().toISOString()})
+      .in('client_id', vend ? clientIds : Object.keys(called));
+    
+    if(error)throw error;
+    
+    // Update local state
+    if(vend){
+      clientIds.forEach(id=>{delete called[id];});
+    } else {
+      Object.keys(called).forEach(k=>{delete called[k];});
+    }
+    
+    updateStats();
+    applyFilters();
+    hideResetPanel();
+    showToast(`✓ Reinicio completado — ${clientIds.length} clientes reiniciados`);
+  }catch(e){showToast('Error en reinicio: '+e.message,'err');}
 }
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
