@@ -1087,14 +1087,14 @@ function render(){
     const wa=tr?(tr.startsWith('54')?tr:'54'+tr.replace(/^0/,'')):'';
     const tD=r[3]
       ?`<a style="color:var(--gr);text-decoration:none;font-family:var(--mo);font-size:11px;vertical-align:middle" href="tel:${r[3]}">${r[3]}</a>`
-      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('tel','${id}',this)">+ tel.</span>`;
-    const editTelBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('tel','${id}',this)" title="Editar teléfono">✏</button>`;
-    const wB=tr?`<a class="ib ib-w" href="${buildWspUrl(r[1],r[3],r[1])}" target="_blank" title="WhatsApp">💬</a>`:'';
-    const mB=r[4]?`<button class="ib ib-m" onclick="openGmailBtn(this)" data-name="${r[1].replace(/"/g,'&quot;')}" data-email="${r[4].replace(/"/g,'&quot;')}" title="Abrir Gmail con template">✉</button>`:'';;
+      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('tel','${id}')">+ tel.</span>`;
+    const editTelBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('tel','${id}')" title="Editar teléfono">✏</button>`;
+    const wB=tr?`<a class="ib ib-w" href="${buildWspUrl(r[1],r[3],r[1])}" target="_blank" title="WhatsApp" onclick="logAction({client_id:'${id}',action:'wsp',client_name:'${r[1].replace(/'/g,"\\'")}' })">💬</a>`:'';
+    const mB=r[4]?`<button class="ib ib-m" onclick="openGmailBtn(this)" data-name="${r[1].replace(/"/g,'&quot;')}" data-email="${r[4].replace(/"/g,'&quot;')}" data-id="${id}" title="Abrir Gmail con template">✉</button>`:'';;
     const eD=r[4]
       ?`<a style="color:var(--bl);text-decoration:none;font-size:10px;vertical-align:middle;max-width:110px;overflow:hidden;text-overflow:ellipsis;display:inline-block" href="mailto:${r[4]}" title="${r[4]}">${r[4]}</a>`
-      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('email','${id}',this)">+ email</span>`;
-    const editEmailBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('email','${id}',this)" title="Editar email">✏</button>`;
+      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('email','${id}')">+ email</span>`;
+    const editEmailBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('email','${id}')" title="Editar email">✏</button>`;
     const ct=r[5]?` <span style="color:var(--tx3);font-size:9px">(${r[5]})</span>`:'';
     return `<tr class="${ic?'called':''}" id="row-${id}">
       <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
@@ -1713,8 +1713,11 @@ function buildGmailUrl(clientName,clientEmail,companyName){
 function openGmailBtn(btn){
   const name=btn.dataset.name||'';
   const email=btn.dataset.email||'';
+  const clientId=btn.dataset.id||'';
   const url=buildGmailUrl(name,email,name);
   window.open(url,'_blank');
+  // Log action
+  logAction({client_id:clientId,action:'email',client_name:name});
 }
 
 
@@ -2296,64 +2299,72 @@ async function deleteNamedTemplate(id,type){
 
 
 // ── INLINE EDIT (phone/email) ──
-const clientEdits={}; // in-memory overrides: {id:{tel,email}}
+const clientEdits={};
+const _ieStore={}; // store old content without polluting DOM
 
-function startInlineEdit(field,id,triggerEl){
-  const row=document.getElementById('row-'+id);
-  if(!row)return;
+function startInlineEdit(field,id){
+  // Prevent double-open
+  if(document.getElementById('ie-'+field+'-'+id))return;
   const r=ROWS.find(r=>r[0]===id);
   const current=field==='tel'?(r?r[3]:''):(r?r[4]:'');
-  // Find the td
   const tdIdx=field==='tel'?3:4;
-  const td=row.querySelectorAll('td')[tdIdx];
-  if(!td)return;
-  const oldHTML=td.innerHTML;
-  td.innerHTML=`<div class="inline-edit-wrap">
-    <input class="inline-inp" id="ie-${field}-${id}" type="${field==='email'?'email':'tel'}" 
-      value="${(current||'').replace(/"/g,'&quot;')}" placeholder="${field==='tel'?'Teléfono':'Email'}"
-      onkeydown="if(event.key==='Enter')confirmInlineEdit('${field}','${id}');if(event.key==='Escape')cancelInlineEdit('${id}',${tdIdx},'${escAttr(oldHTML)}')"
-      onblur="setTimeout(()=>confirmInlineEdit('${field}','${id}'),200)">
-    <button class="bsm be" style="flex-shrink:0" onmousedown="event.preventDefault()" onclick="confirmInlineEdit('${field}','${id}')">✓</button>
-    <button class="bsm bd" style="flex-shrink:0" onmousedown="event.preventDefault()" onclick="cancelInlineEdit('${id}',${tdIdx})">✕</button>
-  </div>`;
-  // Store old HTML for cancel
-  td._oldHTML=oldHTML;
-  const inp=document.getElementById('ie-'+field+'-'+id);
-  if(inp){inp.focus();inp.select();}
-}
-
-function escAttr(s){return s.replace(/'/g,"\\'").replace(/\n/g,'');}
-
-function cancelInlineEdit(id,tdIdx){
   const row=document.getElementById('row-'+id);
   if(!row)return;
   const td=row.querySelectorAll('td')[tdIdx];
-  if(td&&td._oldHTML)td.innerHTML=td._oldHTML;
+  if(!td)return;
+  _ieStore[id+'_'+field]=td.innerHTML; // save old content safely
+  // Build input - no event handlers with HTML in them
+  const wrap=document.createElement('div');
+  wrap.className='inline-edit-wrap';
+  const inp=document.createElement('input');
+  inp.className='inline-inp';
+  inp.id='ie-'+field+'-'+id;
+  inp.type=field==='email'?'email':'tel';
+  inp.value=current||'';
+  inp.placeholder=field==='tel'?'Teléfono':'Email';
+  const btnOk=document.createElement('button');
+  btnOk.className='bsm be';btnOk.style.flexShrink='0';
+  btnOk.innerHTML='✓';btnOk.title='Confirmar';
+  const btnX=document.createElement('button');
+  btnX.className='bsm bd';btnX.style.flexShrink='0';
+  btnX.innerHTML='✕';btnX.title='Cancelar';
+  // Events
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();confirmInlineEdit(field,id);}
+    if(e.key==='Escape'){cancelInlineEdit(field,id);}
+  });
+  let confirmPending=true;
+  inp.addEventListener('blur',()=>{setTimeout(()=>{if(confirmPending)confirmInlineEdit(field,id);},200);});
+  btnOk.addEventListener('mousedown',e=>e.preventDefault());
+  btnOk.addEventListener('click',()=>{confirmPending=false;confirmInlineEdit(field,id);});
+  btnX.addEventListener('mousedown',e=>e.preventDefault());
+  btnX.addEventListener('click',()=>{confirmPending=false;cancelInlineEdit(field,id);});
+  wrap.appendChild(inp);wrap.appendChild(btnOk);wrap.appendChild(btnX);
+  td.innerHTML='';td.appendChild(wrap);
+  inp.focus();inp.select();
+}
+
+function cancelInlineEdit(field,id){
+  const tdIdx=field==='tel'?3:4;
+  const row=document.getElementById('row-'+id);if(!row)return;
+  const td=row.querySelectorAll('td')[tdIdx];
+  if(td&&_ieStore[id+'_'+field]){td.innerHTML=_ieStore[id+'_'+field];delete _ieStore[id+'_'+field];}
 }
 
 async function confirmInlineEdit(field,id){
-  const inp=document.getElementById('ie-'+field+'-'+id);
-  if(!inp)return;
+  const inp=document.getElementById('ie-'+field+'-'+id);if(!inp)return;
   const val=inp.value.trim();
-  const row=document.getElementById('row-'+id);
-  if(!row)return;
-  // Update ROWS array
   const r=ROWS.find(r=>r[0]===id);
-  if(r){
-    if(field==='tel')r[3]=val;
-    else r[4]=val;
-  }
-  // Save to Supabase client_edits table
+  if(r){if(field==='tel')r[3]=val;else r[4]=val;}
+  delete _ieStore[id+'_'+field];
   try{
     if(!clientEdits[id])clientEdits[id]={};
     clientEdits[id][field]=val;
     const payload={client_id:id,updated_by:currentUser?.display_name||currentUser?.username||'',updated_at:new Date().toISOString()};
-    if(field==='tel')payload.telefono=val;
-    else payload.email=val;
+    if(field==='tel')payload.telefono=val;else payload.email=val;
     await db.from('client_edits').upsert(payload,{onConflict:'client_id'});
     showToast('✓ '+(field==='tel'?'Teléfono':'Email')+' actualizado');
-  }catch(e){showToast('Error guardando: '+e.message,'err');}
-  // Re-render row
+  }catch(e){showToast('Error: '+e.message,'err');}
   applyFilters();
 }
 
@@ -2373,59 +2384,107 @@ async function loadClientEdits(){
 }
 
 
+
+// ── ACTION LOG (email/wsp sent tracking) ──
+const actionLog=[]; // {client_id, action, client_name, operador, ts}
+
+function logAction(ev){
+  actionLog.push({
+    ...ev,
+    operador:currentUser?.display_name||currentUser?.username||'',
+    ts:new Date().toISOString()
+  });
+}
+
 async function renderUserMetrics(){
   const wrap=document.getElementById('user-metrics-wrap');
   if(!wrap)return;
-  // Load call logs
   if(!callLogsLoaded)await loadCallLogs();
+
+  // Aggregate calls by user
   const allLogs=[];
   Object.values(callLogs).forEach(logs=>allLogs.push(...logs));
-  if(!allLogs.length){
-    wrap.innerHTML='<div style="font-size:11px;color:var(--tx3);text-align:center;padding:20px;font-family:var(--mo)">Sin logs de llamados registrados aún.</div>';
-    return;
-  }
-  // Group by operador
-  const byUser={};
-  allLogs.forEach(l=>{
-    const u=l.operador||'Sin asignar';
-    if(!byUser[u])byUser[u]={total:0,resultados:{},dias:new Set()};
-    byUser[u].total++;
-    byUser[u].resultados[l.resultado]=(byUser[u].resultados[l.resultado]||0)+1;
-    if(l.created_at)byUser[u].dias.add(l.created_at.slice(0,10));
+
+  // Aggregate emails + wsps from session action log
+  const emailsByUser={}, wspByUser={};
+  actionLog.forEach(a=>{
+    if(a.action==='email')emailsByUser[a.operador]=(emailsByUser[a.operador]||0)+1;
+    if(a.action==='wsp')wspByUser[a.operador]=(wspByUser[a.operador]||0)+1;
   });
-  const users=Object.entries(byUser).sort((a,b)=>b[1].total-a[1].total);
-  const maxTotal=users[0][1].total;
+
   const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
     'Contactado — volver a llamar':'#3b82f6','Contactado — no interesado':'#94a3b8',
     'No atiende':'#f97316','Número incorrecto':'#ef4444','Buzón de voz':'#a855f7'};
-  wrap.innerHTML=`
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:8px">
-      ${users.map(([name,data])=>{
-        const pct=maxTotal?Math.round(data.total/maxTotal*100):0;
-        const topRes=Object.entries(data.resultados).sort((a,b)=>b[1]-a[1]).slice(0,3);
-        return`<div style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:14px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-            <div style="font-weight:600;font-size:13px;color:var(--tx)">${name}</div>
-            <div style="font-family:var(--mo);font-size:16px;font-weight:700;color:var(--ac)">${data.total}</div>
+
+  // Build per-user summary
+  const byUser={};
+  allLogs.forEach(l=>{
+    const u=l.operador||'Sin asignar';
+    if(!byUser[u])byUser[u]={llamadas:0,resultados:{},dias:new Set()};
+    byUser[u].llamadas++;
+    byUser[u].resultados[l.resultado]=(byUser[u].resultados[l.resultado]||0)+1;
+    if(l.created_at)byUser[u].dias.add(l.created_at.slice(0,10));
+  });
+  // Add email/wsp counts
+  new Set([...Object.keys(emailsByUser),...Object.keys(wspByUser),...Object.keys(byUser)]).forEach(u=>{
+    if(!byUser[u])byUser[u]={llamadas:0,resultados:{},dias:new Set()};
+    byUser[u].emails=emailsByUser[u]||0;
+    byUser[u].wsps=wspByUser[u]||0;
+  });
+
+  const users=Object.entries(byUser).sort((a,b)=>(b[1].llamadas+b[1].emails+b[1].wsps)-(a[1].llamadas+a[1].emails+a[1].wsps));
+
+  if(!users.length){
+    wrap.innerHTML='<div style="font-size:11px;color:var(--tx3);text-align:center;padding:20px;font-family:var(--mo)">Sin actividad registrada aún.</div>';
+    return;
+  }
+
+  const maxCalls=Math.max(...users.map(([,d])=>d.llamadas),1);
+
+  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:8px">
+    ${users.map(([name,data])=>{
+      const pct=Math.round(data.llamadas/maxCalls*100);
+      const topRes=Object.entries(data.resultados).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      return`<div style="background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:15px">
+        <div style="font-weight:600;font-size:14px;color:var(--tx);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)">${name}</div>
+        <!-- KPIs -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--ac);font-family:var(--mo)">${data.llamadas}</div>
+            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">Llamados</div>
           </div>
-          <div style="height:6px;background:var(--bd);border-radius:3px;margin-bottom:10px;overflow:hidden">
+          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:var(--bl);font-family:var(--mo)">${data.emails||0}</div>
+            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">Emails</div>
+          </div>
+          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
+            <div style="font-size:18px;font-weight:700;color:#25d366;font-family:var(--mo)">${data.wsps||0}</div>
+            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">WhatsApp</div>
+          </div>
+        </div>
+        <!-- Call progress bar -->
+        ${data.llamadas?`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:3px">
+            <span>Progreso relativo</span><span style="font-family:var(--mo)">${data.dias.size} día${data.dias.size!==1?'s':''}</span>
+          </div>
+          <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:var(--ac);border-radius:3px"></div>
           </div>
-          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-bottom:6px">
-            ${data.dias.size} día${data.dias.size!==1?'s':''} activo${data.dias.size!==1?'s':''}
-          </div>
-          <div style="display:flex;flex-direction:column;gap:3px">
-            ${topRes.map(([res,cnt])=>`
-              <div style="display:flex;align-items:center;gap:6px;font-size:11px">
-                <span style="width:7px;height:7px;border-radius:50%;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
-                <span style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${res}</span>
-                <span style="font-family:var(--mo);color:var(--tx3)">${cnt}</span>
-              </div>`).join('')}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
+        </div>`:''}
+        <!-- Results breakdown -->
+        ${topRes.length?`<div style="display:flex;flex-direction:column;gap:4px">
+          <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;margin-bottom:2px">Resultados de llamados</div>
+          ${topRes.map(([res,cnt])=>`<div style="display:flex;align-items:center;gap:7px;font-size:11px">
+            <span style="width:7px;height:7px;border-radius:50%;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
+            <span style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${res}">${res}</span>
+            <span style="font-family:var(--mo);color:var(--tx3);font-size:10px">${cnt}</span>
+          </div>`).join('')}
+        </div>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
+
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
 document.addEventListener('click',function(e){const btn=document.getElementById('user-btn');const menu=document.getElementById('user-menu');if(menu&&btn&&!btn.contains(e.target)&&!menu.contains(e.target))menu.style.display='none';});
