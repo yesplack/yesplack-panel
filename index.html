@@ -485,7 +485,7 @@ td:last-child{border-right:none}
 <div class="modal-ov" id="sig-modal-ov">
   <div class="modal" style="width:560px;max-width:96vw">
     <div class="mt">✍️ Mi Firma</div>
-    <div class="ms">Esta firma se agrega al final de cada mail que enviés desde el panel</div>
+    <div class="ms">La parte de texto se agrega al mail. Las imágenes se muestran en el editor pero no viajan por URL de Gmail — usá la firma de Gmail para el logo.</div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.2);border-radius:5px;padding:7px 10px;line-height:1.5">
       ℹ️ Esta firma aparecerá <strong>además</strong> de la que tengas en Gmail (si tenés una configurada allá).
       Para evitar duplicados, podés desactivar la de Gmail en Configuración → Ver todas las configuraciones → Firma.
@@ -1688,7 +1688,9 @@ function buildGmailUrl(clientName,clientEmail,companyName){
     .replace(/{NOMBRE}/g,clientName).replace(/{EMPRESA}/g,companyName||clientName);
   // Build sig text from personal signature HTML
   const sigHtml=mySignature||'';
-  const sigText=sigHtml.trim()?'\n\n--\n'+htmlToPlainText(sigHtml):'';
+  const sigPlain=htmlToPlainText(sigHtml).trim();
+  // Only append signature if there's actual text content (images can't go in URL)
+  const sigText=sigPlain?'\n\n--\n'+sigPlain:'';
   const fullBody=rawBody+sigText;
   // Gmail URL body limit ~2000 chars encoded — truncate gracefully
   let bodyParam=fullBody;
