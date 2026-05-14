@@ -193,7 +193,8 @@ td:last-child{border-right:none}
 .tpl-tb{background:var(--sf3);border:1px solid var(--bd);color:var(--tx2);border-radius:4px;padding:3px 7px;font-size:12px;cursor:pointer;transition:all .2s}
 .tpl-tb:hover{border-color:var(--ac);color:var(--ac)}
 
-#tpl-body img,#sig-editor img{max-height:1.4em;width:auto;vertical-align:middle}
+#tpl-body img[alt]{max-height:1.4em;width:auto;vertical-align:middle}
+#sig-editor img{max-width:100%;height:auto}
 #tpl-body ul,#tpl-body ol{padding-left:20px}
 #sig-editor ul,#sig-editor ol{padding-left:20px}
 
@@ -264,6 +265,13 @@ td:last-child{border-right:none}
 .tpl-badge-personal{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
 .tpl-badge-active{background:rgba(34,197,94,.15);color:var(--gr);border:1px solid rgba(34,197,94,.3)}
 .tpl-section-hdr{font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
+
+.editable-cell{cursor:pointer;position:relative}
+.editable-cell:hover .edit-hint{opacity:1}
+.edit-hint{opacity:0;position:absolute;top:50%;right:2px;transform:translateY(-50%);font-size:9px;color:var(--ac);transition:opacity .2s;pointer-events:none}
+.inline-edit-wrap{display:flex;align-items:center;gap:4px}
+.inline-inp{background:var(--sf3);border:1px solid var(--ac);border-radius:4px;color:var(--tx);font-size:12px;padding:2px 6px;outline:none;font-family:var(--mo);min-width:100px;max-width:160px}
+.inline-inp:focus{border-color:var(--ac2)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -900,7 +908,7 @@ async function initApp(){
   populateFilters();
   // Load in parallel but don't let one failure block the rest
   const loads=[loadStates(), loadTemplate(), loadMySignature(), loadNewClients()];
-  loads.push(loadWspTemplate());
+  loads.push(loadWspTemplate());loads.push(loadClientEdits());
   await Promise.allSettled(loads);
   // Call logs load lazily on first click
   subscribeRT();
@@ -1075,17 +1083,23 @@ function render(){
     const id=r[0],ic=!!called[id],nt=notes[id]||'';
     const tr=(r[3]||'').replace(/\D/g,'');
     const wa=tr?(tr.startsWith('54')?tr:'54'+tr.replace(/^0/,'')):'';
-    const tD=r[3]?`<a style="color:var(--gr);text-decoration:none;font-family:var(--mo);font-size:11px;vertical-align:middle" href="tel:${r[3]}">${r[3]}</a>`:`<span class="no-d">sin tel.</span>`;
+    const tD=r[3]
+      ?`<a style="color:var(--gr);text-decoration:none;font-family:var(--mo);font-size:11px;vertical-align:middle" href="tel:${r[3]}">${r[3]}</a>`
+      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('tel','${id}',this)">+ tel.</span>`;
+    const editTelBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('tel','${id}',this)" title="Editar teléfono">✏</button>`;
     const wB=tr?`<a class="ib ib-w" href="${buildWspUrl(r[1],r[3],r[1])}" target="_blank" title="WhatsApp">💬</a>`:'';
     const mB=r[4]?`<button class="ib ib-m" onclick="openGmailBtn(this)" data-name="${r[1].replace(/"/g,'&quot;')}" data-email="${r[4].replace(/"/g,'&quot;')}" title="Abrir Gmail con template">✉</button>`:'';;
-    const eD=r[4]?`<a style="color:var(--bl);text-decoration:none;font-size:10px;vertical-align:middle;max-width:110px;overflow:hidden;text-overflow:ellipsis;display:inline-block" href="mailto:${r[4]}" title="${r[4]}">${r[4]}</a>`:`<span class="no-d">—</span>`;
+    const eD=r[4]
+      ?`<a style="color:var(--bl);text-decoration:none;font-size:10px;vertical-align:middle;max-width:110px;overflow:hidden;text-overflow:ellipsis;display:inline-block" href="mailto:${r[4]}" title="${r[4]}">${r[4]}</a>`
+      :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('email','${id}',this)">+ email</span>`;
+    const editEmailBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('email','${id}',this)" title="Editar email">✏</button>`;
     const ct=r[5]?` <span style="color:var(--tx3);font-size:9px">(${r[5]})</span>`:'';
     return `<tr class="${ic?'called':''}" id="row-${id}">
       <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
       <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}</td>
       <td>${badge(r[2])}</td>
-      <td><div class="ag">${tD}${wB}</div></td>
-      <td><div class="ag">${eD}${mB}</div></td>
+      <td><div class="ag">${tD}${r[3]?editTelBtn:''}${wB}</div></td>
+      <td><div class="ag">${eD}${r[4]?editEmailBtn:''}${mB}</div></td>
       <td title="${r[7]}" style="font-size:11px">${r[7]||'<span class="no-d">—</span>'}</td>
       <td style="font-size:11px">${r[8]}</td>
       <td title="${r[9]}" style="font-size:11px;color:var(--tx2)">${r[9]}</td>
@@ -1205,7 +1219,7 @@ function switchView(v,btn){
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   btn.classList.add('on');
-  if(v==='stats')renderStats();
+  if(v==='stats'){renderStats();renderUserMetrics();}
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -1239,7 +1253,15 @@ function renderStats(){
     <div class="sc"><div class="stit">Por provincia (top 10)</div>${bars(pA,mP,COLS.slice(2))}</div>
     <div class="sc" style="grid-column:1/-1"><div class="stit">Por vendedor — asignados vs % llamados</div>
     ${vA.map((e,i)=>{const c=cV[e[0]]||0,p=e[1]?Math.round(c/e[1]*100):0;return`<div class="br" style="margin-bottom:8px"><div class="bl_" style="width:165px" title="${e[0]}">${e[0]}</div><div style="flex:1"><div class="bt" style="height:8px;margin-bottom:3px"><div class="bf" style="width:${Math.round(e[1]/mV*100)}%;background:${COLS[i%COLS.length]}"></div></div><div class="bt" style="height:5px"><div class="bf" style="width:${Math.round(c/mV*100)}%;background:var(--gr)"></div></div></div><div style="width:75px;text-align:right;font-family:var(--mo);font-size:10px;color:var(--tx3)">${e[1].toLocaleString('es')} | <span style="color:var(--gr)">${p}%</span></div></div>`;}).join('')}
-    <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--tx3)"><span style="color:var(--ac)">■ Asignados</span><span style="color:var(--gr)">■ % llamados</span></div></div>`;
+    <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--tx3)"><span style="color:var(--ac)">■ Asignados</span><span style="color:var(--gr)">■ % llamados</span></div></div>
+    <div class="sc" style="grid-column:1/-1">
+      <div class="stit">📊 Métricas por usuario — sesión activa</div>
+      <div id="user-metrics-wrap">
+        <div style="font-size:11px;color:var(--tx3);font-family:var(--mo)">
+          Cargando logs de llamados…
+        </div>
+      </div>
+    </div>`;
 }
 
 // ── ADMIN: USUARIOS ──
@@ -1577,10 +1599,18 @@ let mySignature = '';
 
 async function loadMySignature(){
   if(!currentUser)return;
+  mySignature=''; // reset
   try{
-    const {data}=await db.from('user_signatures').select('signature_html').eq('user_id',currentUser.id).maybeSingle();
-    if(data)mySignature=data.signature_html||'';
-  }catch(e){console.warn('Sig load:',e);}
+    const {data,error}=await db.from('user_signatures')
+      .select('signature_html')
+      .eq('user_id',currentUser.id)
+      .maybeSingle();
+    if(error){console.warn('Sig load error:',error.message);return;}
+    if(data&&data.signature_html){
+      mySignature=data.signature_html;
+      console.log('Signature loaded, length:',mySignature.length);
+    }
+  }catch(e){console.warn('Sig load exception:',e);}
 }
 
 function openSignatureModal(){
@@ -1589,13 +1619,17 @@ function openSignatureModal(){
 }
 
 async function saveSignature(){
-  const html=document.getElementById('sig-editor').innerHTML;
+  const sigHtml=document.getElementById('sig-editor').innerHTML;
   try{
-    await db.from('user_signatures').upsert({user_id:currentUser.id,signature_html:html,updated_at:new Date().toISOString()},{onConflict:'user_id'});
-    mySignature=html;
-    showToast('✓ Firma guardada');
+    const {error}=await db.from('user_signatures').upsert(
+      {user_id:currentUser.id,signature_html:sigHtml,updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+    if(error)throw error;
+    mySignature=sigHtml;
+    showToast('✓ Firma guardada — se agregará al final de tus mails');
     closeModal('sig-modal-ov');
-  }catch(e){showToast('Error guardando firma','err');}
+  }catch(e){showToast('Error guardando firma: '+e.message,'err');console.error(e);}
 }
 
 async function clearSignature(){
@@ -1644,17 +1678,26 @@ function insertSigImage(input){
   input.value='';
 }
 
-// Override buildGmailUrl to append signature
-const _origBuildGmail=buildGmailUrl;
+// buildGmailUrl uses template + optional personal signature
+// Note: Gmail URL body has a ~2000 char limit. Long bodies get truncated.
+// Signature is appended AFTER the body separator.
 function buildGmailUrl(clientName,clientEmail,companyName){
   const subj=(emailTemplate.subject||'Contacto - {NOMBRE}')
     .replace(/{NOMBRE}/g,clientName).replace(/{EMPRESA}/g,companyName||clientName);
   const rawBody=htmlToPlainText(emailTemplate.body_html||'')
     .replace(/{NOMBRE}/g,clientName).replace(/{EMPRESA}/g,companyName||clientName);
-  const sigText=mySignature?'\n\n--\n'+htmlToPlainText(mySignature):'';
+  // Build sig text from personal signature HTML
+  const sigHtml=mySignature||'';
+  const sigText=sigHtml.trim()?'\n\n--\n'+htmlToPlainText(sigHtml):'';
   const fullBody=rawBody+sigText;
-  const encoded=encodeURIComponent(fullBody);
-  let url=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(clientEmail)}&su=${encodeURIComponent(subj)}&body=${encoded}&tf=1`;
+  // Gmail URL body limit ~2000 chars encoded — truncate gracefully
+  let bodyParam=fullBody;
+  const encoded=encodeURIComponent(bodyParam);
+  if(encoded.length>8000){
+    // Too long: send only body without sig in URL, Gmail sig will still appear from Gmail settings
+    bodyParam=rawBody;
+  }
+  let url=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(clientEmail)}&su=${encodeURIComponent(subj)}&body=${encodeURIComponent(bodyParam)}&tf=1`;
   if(emailTemplate.cc)url+=`&cc=${encodeURIComponent(emailTemplate.cc)}`;
   return url;
 }
@@ -2242,6 +2285,139 @@ async function deleteNamedTemplate(id,type){
     showToast('Plantilla eliminada');
     await loadTemplateLibrary(type);
   }catch(e){showToast('Error: '+e.message,'err');}
+}
+
+
+// ── INLINE EDIT (phone/email) ──
+const clientEdits={}; // in-memory overrides: {id:{tel,email}}
+
+function startInlineEdit(field,id,triggerEl){
+  const row=document.getElementById('row-'+id);
+  if(!row)return;
+  const r=ROWS.find(r=>r[0]===id);
+  const current=field==='tel'?(r?r[3]:''):(r?r[4]:'');
+  // Find the td
+  const tdIdx=field==='tel'?3:4;
+  const td=row.querySelectorAll('td')[tdIdx];
+  if(!td)return;
+  const oldHTML=td.innerHTML;
+  td.innerHTML=`<div class="inline-edit-wrap">
+    <input class="inline-inp" id="ie-${field}-${id}" type="${field==='email'?'email':'tel'}" 
+      value="${(current||'').replace(/"/g,'&quot;')}" placeholder="${field==='tel'?'Teléfono':'Email'}"
+      onkeydown="if(event.key==='Enter')confirmInlineEdit('${field}','${id}');if(event.key==='Escape')cancelInlineEdit('${id}',${tdIdx},'${escAttr(oldHTML)}')"
+      onblur="setTimeout(()=>confirmInlineEdit('${field}','${id}'),200)">
+    <button class="bsm be" style="flex-shrink:0" onmousedown="event.preventDefault()" onclick="confirmInlineEdit('${field}','${id}')">✓</button>
+    <button class="bsm bd" style="flex-shrink:0" onmousedown="event.preventDefault()" onclick="cancelInlineEdit('${id}',${tdIdx})">✕</button>
+  </div>`;
+  // Store old HTML for cancel
+  td._oldHTML=oldHTML;
+  const inp=document.getElementById('ie-'+field+'-'+id);
+  if(inp){inp.focus();inp.select();}
+}
+
+function escAttr(s){return s.replace(/'/g,"\\'").replace(/\n/g,'');}
+
+function cancelInlineEdit(id,tdIdx){
+  const row=document.getElementById('row-'+id);
+  if(!row)return;
+  const td=row.querySelectorAll('td')[tdIdx];
+  if(td&&td._oldHTML)td.innerHTML=td._oldHTML;
+}
+
+async function confirmInlineEdit(field,id){
+  const inp=document.getElementById('ie-'+field+'-'+id);
+  if(!inp)return;
+  const val=inp.value.trim();
+  const row=document.getElementById('row-'+id);
+  if(!row)return;
+  // Update ROWS array
+  const r=ROWS.find(r=>r[0]===id);
+  if(r){
+    if(field==='tel')r[3]=val;
+    else r[4]=val;
+  }
+  // Save to Supabase client_edits table
+  try{
+    if(!clientEdits[id])clientEdits[id]={};
+    clientEdits[id][field]=val;
+    const payload={client_id:id,updated_by:currentUser?.display_name||currentUser?.username||'',updated_at:new Date().toISOString()};
+    if(field==='tel')payload.telefono=val;
+    else payload.email=val;
+    await db.from('client_edits').upsert(payload,{onConflict:'client_id'});
+    showToast('✓ '+(field==='tel'?'Teléfono':'Email')+' actualizado');
+  }catch(e){showToast('Error guardando: '+e.message,'err');}
+  // Re-render row
+  applyFilters();
+}
+
+async function loadClientEdits(){
+  try{
+    const {data,error}=await db.from('client_edits').select('*');
+    if(error)throw error;
+    (data||[]).forEach(e=>{
+      const r=ROWS.find(r=>r[0]===e.client_id);
+      if(r){
+        if(e.telefono!==null&&e.telefono!==undefined)r[3]=e.telefono;
+        if(e.email!==null&&e.email!==undefined)r[4]=e.email;
+        clientEdits[e.client_id]={tel:e.telefono,email:e.email};
+      }
+    });
+  }catch(e){console.warn('clientEdits load:',e);}
+}
+
+
+async function renderUserMetrics(){
+  const wrap=document.getElementById('user-metrics-wrap');
+  if(!wrap)return;
+  // Load call logs
+  if(!callLogsLoaded)await loadCallLogs();
+  const allLogs=[];
+  Object.values(callLogs).forEach(logs=>allLogs.push(...logs));
+  if(!allLogs.length){
+    wrap.innerHTML='<div style="font-size:11px;color:var(--tx3);text-align:center;padding:20px;font-family:var(--mo)">Sin logs de llamados registrados aún.</div>';
+    return;
+  }
+  // Group by operador
+  const byUser={};
+  allLogs.forEach(l=>{
+    const u=l.operador||'Sin asignar';
+    if(!byUser[u])byUser[u]={total:0,resultados:{},dias:new Set()};
+    byUser[u].total++;
+    byUser[u].resultados[l.resultado]=(byUser[u].resultados[l.resultado]||0)+1;
+    if(l.created_at)byUser[u].dias.add(l.created_at.slice(0,10));
+  });
+  const users=Object.entries(byUser).sort((a,b)=>b[1].total-a[1].total);
+  const maxTotal=users[0][1].total;
+  const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
+    'Contactado — volver a llamar':'#3b82f6','Contactado — no interesado':'#94a3b8',
+    'No atiende':'#f97316','Número incorrecto':'#ef4444','Buzón de voz':'#a855f7'};
+  wrap.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:8px">
+      ${users.map(([name,data])=>{
+        const pct=maxTotal?Math.round(data.total/maxTotal*100):0;
+        const topRes=Object.entries(data.resultados).sort((a,b)=>b[1]-a[1]).slice(0,3);
+        return`<div style="background:var(--sf2);border:1px solid var(--bd);border-radius:8px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-weight:600;font-size:13px;color:var(--tx)">${name}</div>
+            <div style="font-family:var(--mo);font-size:16px;font-weight:700;color:var(--ac)">${data.total}</div>
+          </div>
+          <div style="height:6px;background:var(--bd);border-radius:3px;margin-bottom:10px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--ac);border-radius:3px"></div>
+          </div>
+          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-bottom:6px">
+            ${data.dias.size} día${data.dias.size!==1?'s':''} activo${data.dias.size!==1?'s':''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            ${topRes.map(([res,cnt])=>`
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+                <span style="width:7px;height:7px;border-radius:50%;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
+                <span style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${res}</span>
+                <span style="font-family:var(--mo);color:var(--tx3)">${cnt}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
