@@ -1566,10 +1566,16 @@ async function toggleCall(id,btn){
   
   const isCurrentlyCalled=!!called[id];
   
-  // If already called AND has log → blocked (can't unmark)
+  // If already called AND has log → blocked for vendedores, but maestro can override
   if(isCurrentlyCalled && hasLog(id)){
-    showToast('Este cliente tiene un log de llamado registrado. No se puede desmarcar.','err');
-    return;
+    if(currentRole!=='maestro'){
+      showToast('Este cliente tiene un log registrado. Solo el Maestro puede revertirlo.','err');
+      return;
+    }
+    // Maestro override: confirm before reversing
+    const clientRow=ROWS.find(r=>r[0]===id);
+    const name=clientRow?clientRow[1]:id;
+    if(!confirm('⚠️ Revertir llamado de: '+name+'\n\nEsto desmarca el cliente. Los logs quedan en el historial.'))return;
   }
   
   // If already called but NO log → allow free unmark
