@@ -274,6 +274,9 @@ td:last-child{border-right:none}
 .inline-inp:focus{border-color:var(--ac2)}
 
 #sig-editor:empty:before{content:attr(data-placeholder);color:var(--tx3);font-style:italic;pointer-events:none}
+
+tbody tr.pinned{background:rgba(255,214,0,.07)!important;border-left:3px solid var(--ac)}
+tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9px;margin-right:4px;vertical-align:middle}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -1096,7 +1099,7 @@ function render(){
       :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('email','${id}')">+ email</span>`;
     const editEmailBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('email','${id}')" title="Editar email">✏</button>`;
     const ct=r[5]?` <span style="color:var(--tx3);font-size:9px">(${r[5]})</span>`:'';
-    return `<tr class="${ic?'called':''}" id="row-${id}">
+    return `<tr class="${ic?'called':''}" id="row-${id}" onclick="pinRow('${id}',event)">
       <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
       <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}</td>
       <td>${badge(r[2])}</td>
@@ -2485,6 +2488,26 @@ async function renderUserMetrics(){
   </div>`;
 }
 
+
+
+// ── ROW PIN (bookmark current position) ──
+let pinnedRowId=null;
+function pinRow(id,e){
+  // Don't pin when clicking buttons, inputs, links
+  if(e.target.closest('button,a,input,textarea,.nd,.cbtn,.ib,.abadge,.log-badge'))return;
+  const row=document.getElementById('row-'+id);if(!row)return;
+  if(pinnedRowId&&pinnedRowId!==id){
+    const prev=document.getElementById('row-'+pinnedRowId);
+    if(prev)prev.classList.remove('pinned');
+  }
+  if(pinnedRowId===id){
+    row.classList.remove('pinned');
+    pinnedRowId=null;
+  } else {
+    row.classList.add('pinned');
+    pinnedRowId=id;
+  }
+}
 
 function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='none'?'block':'none';}
 document.addEventListener('click',function(e){const btn=document.getElementById('user-btn');const menu=document.getElementById('user-menu');if(menu&&btn&&!btn.contains(e.target)&&!menu.contains(e.target))menu.style.display='none';});
