@@ -252,6 +252,17 @@ td:last-child{border-right:none}
   .tpl-editor-wrap{flex-direction:column}
   .tpl-cards-panel{width:100%}
 }
+
+.tpl-card.global{border-color:rgba(255,214,0,.25)}
+.tpl-card.global:hover{border-color:var(--ac)}
+.tpl-card.personal{border-color:rgba(59,130,246,.2)}
+.tpl-card.personal:hover{border-color:var(--bl)}
+.tpl-card.active-tpl{border-color:var(--gr)!important;box-shadow:0 0 0 1px rgba(34,197,94,.3)}
+.tpl-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:600;font-family:var(--mo);text-transform:uppercase;margin-right:4px}
+.tpl-badge-global{background:rgba(255,214,0,.15);color:#FFD600;border:1px solid rgba(255,214,0,.3)}
+.tpl-badge-personal{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.25)}
+.tpl-badge-active{background:rgba(34,197,94,.15);color:var(--gr);border:1px solid rgba(34,197,94,.3)}
+.tpl-section-hdr{font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin:10px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--bd)}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -1413,11 +1424,16 @@ let emailTemplate = {subject:'Contacto - {NOMBRE}', body_html:'<p>Estimado/a <st
 let templateDirty = false;
 
 async function loadTemplate(){
+  // 1. Try user's personal active template from localStorage
+  try{
+    const key='user_email_tpl_'+(currentUser?.username||'');
+    const saved=localStorage.getItem(key);
+    if(saved){const p=JSON.parse(saved);if(p.body_html){emailTemplate=p;return;}}
+  }catch(e){}
+  // 2. Fall back to global default from DB
   try{
     const {data}=await db.from('email_template').select('*').eq('id','default').maybeSingle();
-    if(data){
-      emailTemplate={subject:data.subject||emailTemplate.subject,body_html:data.body_html||emailTemplate.body_html,cc:data.cc||''};
-    }
+    if(data&&data.body_html){emailTemplate={subject:data.subject||emailTemplate.subject,body_html:data.body_html,cc:data.cc||''};}
   }catch(e){console.warn('Template load:',e);}
 }
 
@@ -1471,22 +1487,20 @@ async function saveTemplate(){
   const subject=document.getElementById('tpl-subject').value.trim()||'Contacto - {NOMBRE}';
   const body_html=document.getElementById('tpl-body').innerHTML||'';
   const cc=document.getElementById('tpl-cc').value.trim();
+  // Save as user's personal active template (localStorage — no impact on other users)
   try{
-    // First try update, then insert if not exists
-    const {data:existing}=await db.from('email_template').select('id').eq('id','default').maybeSingle();
-    let err;
-    if(existing){
-      const r=await db.from('email_template').update({subject,body_html,cc,updated_at:new Date().toISOString()}).eq('id','default');
-      err=r.error;
-    } else {
-      const r=await db.from('email_template').insert({id:'default',subject,body_html,cc,updated_at:new Date().toISOString()});
-      err=r.error;
-    }
-    if(err)throw err;
+    const key='user_email_tpl_'+(currentUser?.username||'');
+    localStorage.setItem(key, JSON.stringify({subject,body_html,cc}));
     emailTemplate={subject,body_html,cc};
     templateDirty=false;
-    showToast('✓ Template guardado');
-  }catch(e){showToast('Error guardando: '+e.message,'err');console.error(e);}
+    showToast('✓ Template activo en tu sesión — no afecta a otros usuarios');
+    // Also persist to DB for default fallback (admin only)
+    if(can('manageUsers')){
+      const {data:existing}=await db.from('email_template').select('id').eq('id','default').maybeSingle();
+      if(existing){await db.from('email_template').update({subject,body_html,cc,updated_at:new Date().toISOString()}).eq('id','default');}
+      else{await db.from('email_template').insert({id:'default',subject,body_html,cc,updated_at:new Date().toISOString()});}
+    }
+  }catch(e){showToast('Error: '+e.message,'err');}
 }
 
 function fmt(cmd,val){
@@ -2031,6 +2045,11 @@ let wspTemplate = {body:'Hola {NOMBRE}, te contacto desde Yesplack — Centro de
 
 async function loadWspTemplate(){
   try{
+    const key='user_wsp_tpl_'+(currentUser?.username||'');
+    const saved=localStorage.getItem(key);
+    if(saved){const p=JSON.parse(saved);if(p.body){wspTemplate=p;return;}}
+  }catch(e){}
+  try{
     const {data}=await db.from('wsp_template').select('*').eq('id','default').maybeSingle();
     if(data&&data.body)wspTemplate={body:data.body};
   }catch(e){console.warn('WSP template load:',e);}
@@ -2063,18 +2082,15 @@ function insertWspVar(v){
 async function saveWspTemplate(){
   const body=document.getElementById('wsp-body').value.trim();
   try{
-    const {data:existing}=await db.from('wsp_template').select('id').eq('id','default').maybeSingle();
-    let err;
-    if(existing){
-      const r=await db.from('wsp_template').update({body,updated_at:new Date().toISOString()}).eq('id','default');
-      err=r.error;
-    }else{
-      const r=await db.from('wsp_template').insert({id:'default',body,updated_at:new Date().toISOString()});
-      err=r.error;
-    }
-    if(err)throw err;
+    const key='user_wsp_tpl_'+(currentUser?.username||'');
+    localStorage.setItem(key,JSON.stringify({body}));
     wspTemplate={body};
-    showToast('✓ Template de WhatsApp guardado');
+    showToast('✓ Template WSP activo en tu sesión — no afecta a otros usuarios');
+    if(can('manageUsers')){
+      const {data:existing}=await db.from('wsp_template').select('id').eq('id','default').maybeSingle();
+      if(existing){await db.from('wsp_template').update({body,updated_at:new Date().toISOString()}).eq('id','default');}
+      else{await db.from('wsp_template').insert({id:'default',body,updated_at:new Date().toISOString()});}
+    }
   }catch(e){showToast('Error: '+e.message,'err');}
 }
 
@@ -2094,12 +2110,24 @@ let tplLibrary = {email:[], wsp:[]};
 
 async function loadTemplateLibrary(type){
   try{
+    // Load global templates + user's own personal templates
     const {data,error}=await db.from('templates_library')
       .select('*').eq('type',type).order('created_at',{ascending:false});
     if(error)throw error;
-    tplLibrary[type]=data||[];
+    const all=data||[];
+    const myUser=currentUser?.username||'';
+    // Filter: show global ones + own personal ones
+    tplLibrary[type]=all.filter(t=>t.is_global||(t.created_by===myUser));
   }catch(e){tplLibrary[type]=[];console.warn('Library load:',e);}
   renderTemplateCards(type);
+}
+
+function getActiveLocalTpl(type){
+  try{return JSON.parse(localStorage.getItem('active_tpl_'+type+'_'+(currentUser?.username||''))||'null');}
+  catch(e){return null;}
+}
+function setActiveLocalTpl(type,tplId){
+  try{localStorage.setItem('active_tpl_'+type+'_'+(currentUser?.username||''),JSON.stringify({id:tplId}));}catch(e){}
 }
 
 function renderTemplateCards(type){
@@ -2113,30 +2141,58 @@ function renderTemplateCards(type){
       Sin plantillas guardadas.<br><span style="font-size:10px">Editá un template y usá<br>"💾 Guardar como plantilla".</span></div>`;
     return;
   }
-  const accentColor=type==='wsp'?'#25d366':'var(--ac)';
-  container.innerHTML=cards.map(c=>{
+  const activeId=(getActiveLocalTpl(type)||{}).id;
+  const myUser=currentUser?.username||'';
+  const globals=cards.filter(c=>c.is_global);
+  const personal=cards.filter(c=>!c.is_global);
+
+  function cardHtml(c){
+    const isActive=c.id===activeId;
+    const isOwn=c.created_by===myUser;
+    const canDel=isOwn||(can('manageUsers'));
     const preview=type==='email'
       ? (c.body_html?c.body_html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,80):'')
       : (c.body||'').slice(0,80);
     const date=new Date(c.created_at).toLocaleDateString('es',{day:'2-digit',month:'2-digit',year:'2-digit'});
-    return `<div class="tpl-card" onclick="loadNamedTemplate('${c.id}','${type}')">
-      <div class="tpl-card-name" title="${c.name||''}">${c.name||'Sin nombre'}</div>
+    const badge=c.is_global
+      ?`<span class="tpl-badge tpl-badge-global">🌐 Global</span>`
+      :`<span class="tpl-badge tpl-badge-personal">👤 Mía</span>`;
+    const activeBadge=isActive?`<span class="tpl-badge tpl-badge-active">✓ Activa</span>`:'';
+    return `<div class="tpl-card ${c.is_global?'global':'personal'} ${isActive?'active-tpl':''}" 
+        onclick="loadNamedTemplate('${c.id}','${type}')">
+      <div style="margin-bottom:3px">${badge}${activeBadge}</div>
+      <div class="tpl-card-name" title="${(c.name||'').replace(/"/g,'&quot;')}">${c.name||'Sin nombre'}</div>
       <div class="tpl-card-preview">${preview||'(sin contenido)'}</div>
       <div class="tpl-card-footer">
-        <div class="tpl-card-date">${date}</div>
+        <div class="tpl-card-date">${c.created_by?c.created_by+' · ':''} ${date}</div>
         <div class="tpl-card-actions" onclick="event.stopPropagation()">
           <button class="bsm be" onclick="loadNamedTemplate('${c.id}','${type}')">Cargar</button>
-          <button class="bsm bd" onclick="deleteNamedTemplate('${c.id}','${type}')">✕</button>
+          ${canDel?`<button class="bsm bd" onclick="deleteNamedTemplate('${c.id}','${type}')">✕</button>`:''}
         </div>
       </div>
     </div>`;
-  }).join('');
+  }
+
+  let out='';
+  if(globals.length){out+=`<div class="tpl-section-hdr">🌐 Plantillas del equipo</div>`;out+=globals.map(cardHtml).join('');}
+  if(personal.length){out+=`<div class="tpl-section-hdr">👤 Mis plantillas</div>`;out+=personal.map(cardHtml).join('');}
+  container.innerHTML=out;
 }
 
 async function saveAsNamedTemplate(type){
   const name=prompt('Nombre de la plantilla:','');
   if(!name||!name.trim())return;
-  let payload={type,name:name.trim(),created_at:new Date().toISOString()};
+  // Admins/maestros can choose to make it global
+  let isGlobal=false;
+  if(can('manageUsers')||can('editTemplate')){
+    isGlobal=confirm('¿Hacer esta plantilla visible para todos los usuarios?\n\nAceptar = Plantilla global (todos la ven)\nCancelar = Solo para mí');
+  }
+  let payload={
+    type,name:name.trim(),
+    created_by:currentUser?.username||'',
+    is_global:isGlobal,
+    created_at:new Date().toISOString()
+  };
   if(type==='email'){
     payload.subject=document.getElementById('tpl-subject').value.trim();
     payload.body_html=document.getElementById('tpl-body').innerHTML;
@@ -2147,7 +2203,7 @@ async function saveAsNamedTemplate(type){
   try{
     const {error}=await db.from('templates_library').insert(payload);
     if(error)throw error;
-    showToast('✓ Plantilla "'+name.trim()+'" guardada');
+    showToast('✓ Plantilla "'+(isGlobal?'🌐 ':'👤 ')+name.trim()+'" guardada');
     await loadTemplateLibrary(type);
   }catch(e){showToast('Error: '+e.message,'err');}
 }
@@ -2159,11 +2215,21 @@ async function loadNamedTemplate(id,type){
     if(card.subject)document.getElementById('tpl-subject').value=card.subject;
     if(card.body_html)document.getElementById('tpl-body').innerHTML=card.body_html;
     if(card.cc!==undefined)document.getElementById('tpl-cc').value=card.cc||'';
+    // Also set as active for this user
+    const key='user_email_tpl_'+(currentUser?.username||'');
+    localStorage.setItem(key,JSON.stringify({subject:card.subject||'',body_html:card.body_html||'',cc:card.cc||''}));
+    emailTemplate={subject:card.subject||emailTemplate.subject,body_html:card.body_html||'',cc:card.cc||''};
+    setActiveLocalTpl(type,id);
   } else {
     if(card.body)document.getElementById('wsp-body').value=card.body;
+    const key='user_wsp_tpl_'+(currentUser?.username||'');
+    localStorage.setItem(key,JSON.stringify({body:card.body||''}));
+    wspTemplate={body:card.body||''};
+    setActiveLocalTpl(type,id);
     updateWspPreview();
   }
-  showToast('✓ Plantilla "'+card.name+'" cargada en el editor');
+  renderTemplateCards(type); // refresh to show active badge
+  showToast('✓ "'+card.name+'" activa en tu sesión');
 }
 
 async function deleteNamedTemplate(id,type){
