@@ -272,6 +272,8 @@ td:last-child{border-right:none}
 .inline-edit-wrap{display:flex;align-items:center;gap:4px}
 .inline-inp{background:var(--sf3);border:1px solid var(--ac);border-radius:4px;color:var(--tx);font-size:12px;padding:2px 6px;outline:none;font-family:var(--mo);min-width:100px;max-width:160px}
 .inline-inp:focus{border-color:var(--ac2)}
+
+#sig-editor:empty:before{content:attr(data-placeholder);color:var(--tx3);font-style:italic;pointer-events:none}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:var(--sf)}
 ::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
@@ -396,7 +398,7 @@ td:last-child{border-right:none}
       <button class="user-btn" id="user-btn" onclick="toggleUserMenu()">👤 —</button>
       <div id="user-menu" style="display:none;position:absolute;top:30px;right:0;background:var(--sf);border:1px solid var(--bd);border-radius:7px;min-width:160px;z-index:300;overflow:hidden">
         <div onclick="toggleUserMenu();openPwModal(true)" style="padding:9px 14px;font-size:12px;cursor:pointer;color:var(--tx2);transition:background .15s" onmouseover="this.style.background='var(--sf2)'" onmouseout="this.style.background=''">🔑 Cambiar contraseña</div>
-        <div onclick="toggleUserMenu();openSignatureModal()" style="padding:9px 14px;font-size:12px;cursor:pointer;color:var(--tx2);border-top:1px solid var(--bd);transition:background .15s" onmouseover="this.style.background='var(--sf2)'" onmouseout="this.style.background=''">✍️ Mi firma</div>
+        <div onclick="toggleUserMenu();openSignatureModal()" style="padding:9px 14px;font-size:12px;cursor:pointer;color:var(--tx2);border-top:1px solid var(--bd);transition:background .15s" onmouseover="this.style.background='var(--sf2)'" onmouseout="this.style.background=''">✍️ Mi firma <span id="sig-status-badge" style="font-size:9px;font-family:var(--mo);color:var(--tx3)"></span></div>
       </div>
     </div>
     <button class="btn-out" onclick="doLogout()">Salir</button>
@@ -485,7 +487,7 @@ td:last-child{border-right:none}
 <div class="modal-ov" id="sig-modal-ov">
   <div class="modal" style="width:560px;max-width:96vw">
     <div class="mt">✍️ Mi Firma</div>
-    <div class="ms">La parte de texto se agrega al mail. Las imágenes se muestran en el editor pero no viajan por URL de Gmail — usá la firma de Gmail para el logo.</div>
+    <div class="ms">El texto de la firma se agrega al final del mail (después de --). Las imágenes no pueden viajar en la URL de Gmail.</div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;background:rgba(255,214,0,.08);border:1px solid rgba(255,214,0,.2);border-radius:5px;padding:7px 10px;line-height:1.5">
       ℹ️ Esta firma aparecerá <strong>además</strong> de la que tengas en Gmail (si tenés una configurada allá).
       Para evitar duplicados, podés desactivar la de Gmail en Configuración → Ver todas las configuraciones → Firma.
@@ -503,7 +505,7 @@ td:last-child{border-right:none}
       <span style="font-size:10px;color:var(--tx3);align-self:center;margin-left:4px">JPG/PNG hasta 5MB — compresión automática</span>
     </div>
     <div id="sig-editor" contenteditable="true"
-      style="min-height:120px;max-height:260px;overflow-y:auto;background:var(--sf2);border:1px solid var(--bd);border-top:none;border-radius:0 0 6px 6px;padding:10px;color:var(--tx);font-size:13px;font-family:var(--sa);outline:none;line-height:1.6">
+      style="min-height:120px;max-height:260px;overflow-y:auto;background:var(--sf2);border:1px solid var(--bd);border-top:none;border-radius:0 0 6px 6px;padding:10px;color:var(--tx);font-size:13px;font-family:var(--sa);outline:none;line-height:1.6" data-placeholder="Escribí tu nombre, cargo, teléfono... El texto aparecerá al final del mail. Las imágenes son solo decorativas acá.">
     </div>
     <div class="mfoot" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--bd);justify-content:space-between">
       <button class="btn-g" style="color:var(--rd);border-color:rgba(239,68,68,.3)" onclick="clearSignature()">Eliminar firma</button>
@@ -1608,7 +1610,10 @@ async function loadMySignature(){
     if(error){console.warn('Sig load error:',error.message);return;}
     if(data&&data.signature_html){
       mySignature=data.signature_html;
-      console.log('Signature loaded, length:',mySignature.length);
+      const sigText=htmlToPlainText(data.signature_html).trim();
+      const badge=document.getElementById('sig-status-badge');
+      if(badge)badge.textContent=sigText?'(✓ con texto)':'(solo imagen)';
+      console.log('Signature loaded, textLength:',sigText.length,'htmlLength:',data.signature_html.length);
     }
   }catch(e){console.warn('Sig load exception:',e);}
 }
