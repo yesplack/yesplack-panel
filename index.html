@@ -728,11 +728,16 @@ td:last-child{border-right:none}
 
 <!-- VIEW: TEMPLATE EMAIL -->
 <div id="view-template" class="view">
-  <div style="padding:20px;max-width:780px">
+  <div style="padding:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
       <div style="font-size:16px;font-weight:700">✉ Template de Email</div>
-      <button class="btn" onclick="saveTemplate()">Guardar template</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-g" onclick="saveAsNamedTemplate('email')">💾 Guardar como plantilla</button>
+        <button class="btn" onclick="saveTemplate()">✓ Usar este template</button>
+      </div>
     </div>
+    <div class="tpl-editor-wrap">
+    <div class="tpl-editor-main">
     <div style="background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:18px;margin-bottom:14px">
       <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px">Variables disponibles</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -784,6 +789,17 @@ td:last-child{border-right:none}
     <div style="margin-top:10px;font-size:11px;color:var(--tx3);font-style:italic">
       ℹ️ La firma de Gmail aparecerá automáticamente desde tu cuenta. El template sólo pre-carga el cuerpo del mensaje.
     </div>
+    </div><!-- end tpl-editor-main -->
+    <div class="tpl-cards-panel">
+      <div class="tpl-sidebar-title">
+        <span>Plantillas guardadas</span>
+        <span id="email-tpl-count" style="color:var(--ac);font-weight:600"></span>
+      </div>
+      <div id="email-tpl-cards" style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto">
+        <div style="color:var(--tx3);font-size:12px;text-align:center;padding:20px">Cargando…</div>
+      </div>
+    </div>
+    </div><!-- end tpl-editor-wrap -->
   </div>
 </div>
 <script>
