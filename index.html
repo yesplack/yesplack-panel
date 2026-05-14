@@ -694,14 +694,15 @@ async function initData(){
     const resp = await fetch('data.json');
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const loaded = await resp.json();
-    RAW.rows = loaded.rows;
+    // Mutate in-place so const ROWS reference stays valid
+    Array.prototype.push.apply(RAW.rows, loaded.rows);
     RAW.tipos = loaded.tipos;
     RAW.vendedores = loaded.vendedores;
     RAW.provincias = loaded.provincias;
     RAW.localidades = loaded.localidades;
   } catch(e){
     console.error('Error loading data.json:', e);
-    alert('Error cargando datos. Verificá que data.json esté en la misma carpeta.');
+    alert('Error cargando datos: '+e.message+'. Verificá que data.json esté publicado junto al index.html');
   }
 }
 
@@ -763,6 +764,7 @@ function can(perm){return !!(currentUser&&PERMS[currentRole||'vendedor']&&PERMS[
 
 async function initApp(){
   if(!RAW.rows.length) await initData();
+  if(!RAW.rows.length){alert('No se pudieron cargar los datos. Recargá la página.');return;}
   populateFilters();
   // Load in parallel but don't let one failure block the rest
   const loads=[loadStates(), loadTemplate(), loadMySignature(), loadNewClients()];
