@@ -507,9 +507,23 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
 
 <!-- VIEW: STATS -->
 <div id="view-stats" class="view">
-  <div class="sw">
-    <div class="sgrid" id="stats-top"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px" id="stats-ch"></div>
+  <div id="stats-dashboard" style="padding:20px;max-width:1600px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Panel de actividad del equipo</div>
+        <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">Performance del equipo</div>
+      </div>
+      <div id="stats-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px">Cargando…</div>
+    </div>
+    <!-- KPI hero row -->
+    <div id="stats-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px"></div>
+    <!-- Middle: donut + leaderboard -->
+    <div style="display:grid;grid-template-columns:340px 1fr;gap:14px;margin-bottom:18px">
+      <div id="stats-donut-wrap" style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center"></div>
+      <div id="stats-leaderboard" style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;overflow:hidden"></div>
+    </div>
+    <!-- User cards -->
+    <div id="stats-user-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
   </div>
 </div>
 
@@ -1283,7 +1297,7 @@ function switchView(v,btn){
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   btn.classList.add('on');
-  if(v==='stats'){renderStats();renderUserMetrics();}
+  if(v==='stats'){renderStats();}
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -1291,42 +1305,184 @@ function switchView(v,btn){
   if(v==='listar25')r25Init();
 }
 
-// ── STATS ──
-const COLS=['#f97316','#3b82f6','#a855f7','#22c55e','#eab308','#ef4444','#14b8a6','#f43f5e'];
-function renderStats(){
-  const tc=Object.keys(called).filter(k=>called[k]).length,tot=ROWS.length;
-  const cT=ROWS.filter(r=>r[3]).length,cM=ROWS.filter(r=>r[4]).length;
-  document.getElementById('stats-top').innerHTML=`
-    <div class="sc"><div class="sc-t">Total clientes</div><div class="sc-n">${tot.toLocaleString('es')}</div><div class="sc-s">Base completa</div></div>
-    <div class="sc"><div class="sc-t">Llamados realizados</div><div class="sc-n" style="color:var(--gr)">${tc.toLocaleString('es')}</div><div class="sc-s">${tot?Math.round(tc/tot*100):0}% — todo el equipo</div></div>
-    <div class="sc"><div class="sc-t">Con teléfono</div><div class="sc-n" style="color:var(--bl)">${cT.toLocaleString('es')}</div><div class="sc-s">${Math.round(cT/tot*100)}% contactables</div></div>
-    <div class="sc"><div class="sc-t">Con email</div><div class="sc-n" style="color:var(--pu)">${cM.toLocaleString('es')}</div><div class="sc-s">${Math.round(cM/tot*100)}% tienen email</div></div>`;
-  const pT={},pP={},pV={},cV={};
-  ROWS.forEach(r=>{
-    const t=r[2]||'Sin tipo';pT[t]=(pT[t]||0)+1;
-    const p=r[8]||'Sin provincia';pP[p]=(pP[p]||0)+1;
-    const v=r[9]||'Sin asignar';pV[v]=(pV[v]||0)+1;
-    if(called[r[0]])cV[v]=(cV[v]||0)+1;
-  });
-  const tA=Object.entries(pT).sort((a,b)=>b[1]-a[1]);
-  const pA=Object.entries(pP).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const vA=Object.entries(pV).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  const mT=tA[0][1],mP=pA[0][1],mV=vA[0][1];
-  function bars(arr,max,cl){return arr.map((e,i)=>`<div class="br"><div class="bl_" title="${e[0]}">${e[0]}</div><div class="bt"><div class="bf" style="width:${Math.round(e[1]/max*100)}%;background:${cl[i%cl.length]}"></div></div><div class="bv">${e[1].toLocaleString('es')}</div></div>`).join('');}
-  document.getElementById('stats-ch').innerHTML=`
-    <div class="sc"><div class="stit">Por tipo de cliente</div>${bars(tA,mT,COLS)}</div>
-    <div class="sc"><div class="stit">Por provincia (top 10)</div>${bars(pA,mP,COLS.slice(2))}</div>
-    <div class="sc" style="grid-column:1/-1"><div class="stit">Por vendedor — asignados vs % llamados</div>
-    ${vA.map((e,i)=>{const c=cV[e[0]]||0,p=e[1]?Math.round(c/e[1]*100):0;return`<div class="br" style="margin-bottom:8px"><div class="bl_" style="width:165px" title="${e[0]}">${e[0]}</div><div style="flex:1"><div class="bt" style="height:8px;margin-bottom:3px"><div class="bf" style="width:${Math.round(e[1]/mV*100)}%;background:${COLS[i%COLS.length]}"></div></div><div class="bt" style="height:5px"><div class="bf" style="width:${Math.round(c/mV*100)}%;background:var(--gr)"></div></div></div><div style="width:75px;text-align:right;font-family:var(--mo);font-size:10px;color:var(--tx3)">${e[1].toLocaleString('es')} | <span style="color:var(--gr)">${p}%</span></div></div>`;}).join('')}
-    <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--tx3)"><span style="color:var(--ac)">■ Asignados</span><span style="color:var(--gr)">■ % llamados</span></div></div>
-    <div class="sc" style="grid-column:1/-1">
-      <div class="stit">📊 Métricas por usuario — sesión activa</div>
-      <div id="user-metrics-wrap">
-        <div style="font-size:11px;color:var(--tx3);font-family:var(--mo)">
-          Cargando logs de llamados…
-        </div>
-      </div>
+async function renderStats(){
+  // ── Load data in parallel ──────────────────────────────────────────────────
+  const [clRes, ctRes] = await Promise.all([
+    db.from('call_logs').select('client_id,resultado,operador,created_at').order('created_at',{ascending:false}).limit(10000),
+    db.from('contact_logs').select('id,client_id,lista,canal,resultado,operador,created_at').order('created_at',{ascending:false}).limit(10000)
+  ]);
+  const callData  = clRes.data  || [];
+  const contData  = ctRes.data  || [];
+
+  // ── Aggregate totals ───────────────────────────────────────────────────────
+  const totalLlamados   = callData.length;
+  const totalWsp        = contData.filter(l=>l.canal==='wsp').length;
+  const totalMail       = contData.filter(l=>l.canal==='mail').length;
+  const totalReagendar  = contData.filter(l=>l.canal==='reagendar').length;
+  const totalAll        = totalLlamados + totalWsp + totalMail + totalReagendar;
+
+  // Date range
+  const allDates = [...callData,...contData].map(l=>l.created_at).filter(Boolean).sort();
+  const dateLabel = allDates.length
+    ? new Date(allDates[0]).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+      + ' → ' + new Date(allDates[allDates.length-1]).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+    : 'Sin datos';
+  document.getElementById('stats-period-badge').textContent = '📆 ' + dateLabel;
+
+  // ── KPI HERO CARDS ─────────────────────────────────────────────────────────
+  const kpis=[
+    {n:totalAll,   lbl:'Total interacciones', icon:'⚡', color:'var(--ac)',  glow:'rgba(255,214,0,.15)'},
+    {n:totalLlamados, lbl:'Llamados',         icon:'📞', color:'#4ade80',   glow:'rgba(74,222,128,.12)'},
+    {n:totalWsp,   lbl:'WhatsApp',            icon:'💬', color:'#25d366',   glow:'rgba(37,211,102,.12)'},
+    {n:totalMail,  lbl:'Emails',              icon:'✉️', color:'#60a5fa',   glow:'rgba(96,165,250,.12)'},
+    {n:totalReagendar,lbl:'Reagendados',      icon:'📅', color:'#c084fc',   glow:'rgba(192,132,252,.12)'},
+  ];
+  document.getElementById('stats-kpis').innerHTML=kpis.map(k=>`
+    <div style="background:${k.glow};border:1px solid ${k.color.replace('var(--ac)','rgba(255,214,0,.35)').replace('#4ade80','rgba(74,222,128,.25)').replace('#25d366','rgba(37,211,102,.25)').replace('#60a5fa','rgba(96,165,250,.25)').replace('#c084fc','rgba(192,132,252,.25)')};border-radius:13px;padding:20px 18px;position:relative;overflow:hidden">
+      <div style="font-size:28px;margin-bottom:10px">${k.icon}</div>
+      <div style="font-size:34px;font-weight:900;font-family:var(--mo);color:${k.color};line-height:1;letter-spacing:-1px">${k.n.toLocaleString('es')}</div>
+      <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:6px">${k.lbl}</div>
+      <div style="position:absolute;bottom:-14px;right:-8px;font-size:64px;opacity:.06;line-height:1">${k.icon}</div>
+    </div>`).join('');
+
+  // ── DONUT CHART ────────────────────────────────────────────────────────────
+  const donutData=[
+    {lbl:'Llamados',   n:totalLlamados, color:'#4ade80'},
+    {lbl:'WhatsApp',   n:totalWsp,      color:'#25d366'},
+    {lbl:'Email',      n:totalMail,     color:'#60a5fa'},
+    {lbl:'Reagendar',  n:totalReagendar,color:'#c084fc'},
+  ].filter(d=>d.n>0);
+
+  let donutSvg='';
+  if(donutData.length){
+    const R=80, cx=110, cy=110, stroke=28;
+    const circum=2*Math.PI*R;
+    let offset=0;
+    const slices=donutData.map(d=>{
+      const pct=d.n/totalAll;
+      const dash=pct*circum;
+      const sl={...d,pct,dash,offset};
+      offset+=dash;
+      return sl;
+    });
+    donutSvg=`<svg viewBox="0 0 220 220" width="200" height="200" style="margin-bottom:12px;overflow:visible">
+      <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--bd)" stroke-width="${stroke}"/>
+      ${slices.map(s=>`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}"
+        stroke-width="${stroke}" stroke-dasharray="${s.dash} ${circum-s.dash}"
+        stroke-dashoffset="${circum/4-s.offset}" transform="rotate(-90 ${cx} ${cy})"
+        style="transition:stroke-dasharray .6s"/>
+      `).join('')}
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle"
+        style="font-family:var(--mo);font-size:24px;font-weight:700;fill:var(--tx);letter-spacing:-1px">${totalAll}</text>
+      <text x="${cx}" y="${cy+20}" text-anchor="middle"
+        style="font-family:var(--mo);font-size:9px;fill:var(--tx3);text-transform:uppercase;letter-spacing:1px">Total</text>
+    </svg>`;
+  } else {
+    donutSvg='<div style="color:var(--tx3);font-size:12px;padding:30px">Sin datos aún</div>';
+  }
+  document.getElementById('stats-donut-wrap').innerHTML=`
+    <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;align-self:flex-start">Canales de contacto</div>
+    ${donutSvg}
+    <div style="display:flex;flex-direction:column;gap:7px;width:100%">
+      ${donutData.map(d=>`
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></span>
+          <span style="font-size:11px;color:var(--tx2);flex:1">${d.lbl}</span>
+          <span style="font-family:var(--mo);font-size:11px;color:var(--tx)">${d.n}</span>
+          <span style="font-family:var(--mo);font-size:10px;color:var(--tx3);min-width:32px;text-align:right">${Math.round(d.n/totalAll*100)}%</span>
+        </div>`).join('')}
     </div>`;
+
+  // ── LEADERBOARD ────────────────────────────────────────────────────────────
+  const byUser={};
+  const addToUser=(u,field)=>{if(!u)u='—';if(!byUser[u])byUser[u]={llamados:0,wsp:0,mail:0,reagendar:0,lastAt:null};byUser[u][field]++;};
+  callData.forEach(l=>{addToUser(l.operador,'llamados');if(l.created_at&&(!byUser[l.operador]?.lastAt||l.created_at>byUser[l.operador].lastAt))byUser[l.operador||'—'].lastAt=l.created_at;});
+  contData.forEach(l=>{addToUser(l.operador,l.canal==='wsp'?'wsp':l.canal==='mail'?'mail':l.canal==='reagendar'?'reagendar':'llamados');if(l.created_at&&byUser[l.operador||'—']&&(!byUser[l.operador||'—'].lastAt||l.created_at>byUser[l.operador||'—'].lastAt))byUser[l.operador||'—'].lastAt=l.created_at;});
+
+  const ranked=Object.entries(byUser).map(([name,d])=>({name,total:d.llamados+d.wsp+d.mail+d.reagendar,...d})).sort((a,b)=>b.total-a.total);
+  const maxTotal=ranked[0]?.total||1;
+  const medals=['🥇','🥈','🥉'];
+
+  document.getElementById('stats-leaderboard').innerHTML=`
+    <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Ranking de actividad</div>
+    ${ranked.length===0?'<div style="color:var(--tx3);font-size:12px;text-align:center;padding:30px">Sin actividad registrada</div>':''}
+    ${ranked.map((u,i)=>{
+      const initials=u.name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+      const barPct=Math.round(u.total/maxTotal*100);
+      const avatarColor=i===0?'var(--ac)':i===1?'#94a3b8':i===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][i%5];
+      const lastTs=u.lastAt?new Date(u.lastAt).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—';
+      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,48,72,.5)">
+        <div style="font-size:18px;min-width:28px;text-align:center">${medals[i]||'<span style="font-family:var(--mo);color:var(--tx3);font-size:11px">'+(i+1)+'</span>'}</div>
+        <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.name}</span>
+            <span style="font-family:var(--mo);font-size:11px;color:var(--ac);font-weight:700;flex-shrink:0;margin-left:8px">${u.total}</span>
+          </div>
+          <div style="height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin-bottom:5px">
+            <div style="height:100%;width:${barPct}%;background:${avatarColor};border-radius:3px;transition:width .6s"></div>
+          </div>
+          <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mo);color:var(--tx3)">
+            <span style="color:#4ade80">📞${u.llamados}</span>
+            <span style="color:#25d366">💬${u.wsp}</span>
+            <span style="color:#60a5fa">✉${u.mail}</span>
+            <span style="color:var(--tx3)">última: ${lastTs}</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+
+  // ── USER DETAIL CARDS ──────────────────────────────────────────────────────
+  const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
+    'Contactado — volver a llamar':'#3b82f6','Contactado — no interesado':'#94a3b8',
+    'No atiende':'#f97316','Número incorrecto':'#ef4444','Buzón de voz':'#a855f7',
+    'Respondió — interesado':'#22c55e','Respondió — no interesado':'#94a3b8',
+    'Respondió — solicita presupuesto':'#FFD600','Respondió — volver a contactar':'#3b82f6',
+    'Mensaje enviado — sin respuesta':'#60a5fa','Email enviado — sin respuesta':'#60a5fa',
+  };
+  // Build per-user resultado breakdown
+  const byUserRes={};
+  callData.forEach(l=>{const u=l.operador||'—';if(!byUserRes[u])byUserRes[u]={};byUserRes[u][l.resultado]=(byUserRes[u][l.resultado]||0)+1;});
+
+  document.getElementById('stats-user-cards').innerHTML=ranked.map((u,i)=>{
+    const initials=u.name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    const avatarColor=i===0?'var(--ac)':i===1?'#94a3b8':i===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][i%5];
+    const topRes=Object.entries(byUserRes[u.name]||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const lastTs=u.lastAt?new Date(u.lastAt).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'Sin actividad';
+    return`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:border-color .2s" onmouseover="this.style.borderColor='${avatarColor}'" onmouseout="this.style.borderColor='var(--bd)'">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${avatarColor};border-radius:12px 12px 0 0"></div>
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="width:42px;height:42px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#000;flex-shrink:0;box-shadow:0 0 0 3px rgba(0,0,0,.3)">${initials}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700">${u.name}</div>
+          <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);margin-top:1px">${lastTs}</div>
+        </div>
+        ${i<3?`<div style="margin-left:auto;font-size:22px">${medals[i]}</div>`:''}
+      </div>
+      <!-- KPI numbers -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+        ${[
+          {v:u.total,    lbl:'Total',   c:avatarColor},
+          {v:u.llamados, lbl:'Llamados',c:'#4ade80'},
+          {v:u.wsp,      lbl:'WSP',     c:'#25d366'},
+          {v:u.mail,     lbl:'Mail',    c:'#60a5fa'},
+        ].map(k=>`<div style="background:var(--sf2);border-radius:8px;padding:8px 6px;text-align:center">
+          <div style="font-size:20px;font-weight:900;font-family:var(--mo);color:${k.c};line-height:1">${k.v}</div>
+          <div style="font-size:8px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;margin-top:3px;letter-spacing:.5px">${k.lbl}</div>
+        </div>`).join('')}
+      </div>
+      <!-- Resultado breakdown -->
+      ${topRes.length?`<div style="border-top:1px solid var(--bd);padding-top:11px">
+        <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px">Resultados de llamados</div>
+        ${topRes.map(([res,cnt])=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+          <span style="width:8px;height:8px;border-radius:2px;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0"></span>
+          <span style="font-size:10px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${res}</span>
+          <span style="font-family:var(--mo);font-size:10px;color:var(--tx);font-weight:600">${cnt}</span>
+        </div>`).join('')}
+      </div>`:'<div style="color:var(--tx3);font-size:10px;font-family:var(--mo);border-top:1px solid var(--bd);padding-top:10px">Sin llamados registrados aún</div>'}
+    </div>`;
+  }).join('');
 }
 
 // ── ADMIN: USUARIOS ──
@@ -2511,97 +2667,6 @@ function logAction(ev){
     ts:new Date().toISOString()
   });
 }
-
-async function renderUserMetrics(){
-  const wrap=document.getElementById('user-metrics-wrap');
-  if(!wrap)return;
-  if(!callLogsLoaded)await loadCallLogs();
-
-  // Aggregate calls by user
-  const allLogs=[];
-  Object.values(callLogs).forEach(logs=>allLogs.push(...logs));
-
-  // Aggregate emails + wsps from session action log
-  const emailsByUser={}, wspByUser={};
-  actionLog.forEach(a=>{
-    if(a.action==='email')emailsByUser[a.operador]=(emailsByUser[a.operador]||0)+1;
-    if(a.action==='wsp')wspByUser[a.operador]=(wspByUser[a.operador]||0)+1;
-  });
-
-  const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
-    'Contactado — volver a llamar':'#3b82f6','Contactado — no interesado':'#94a3b8',
-    'No atiende':'#f97316','Número incorrecto':'#ef4444','Buzón de voz':'#a855f7'};
-
-  // Build per-user summary
-  const byUser={};
-  allLogs.forEach(l=>{
-    const u=l.operador||'Sin asignar';
-    if(!byUser[u])byUser[u]={llamadas:0,resultados:{},dias:new Set()};
-    byUser[u].llamadas++;
-    byUser[u].resultados[l.resultado]=(byUser[u].resultados[l.resultado]||0)+1;
-    if(l.created_at)byUser[u].dias.add(l.created_at.slice(0,10));
-  });
-  // Add email/wsp counts
-  new Set([...Object.keys(emailsByUser),...Object.keys(wspByUser),...Object.keys(byUser)]).forEach(u=>{
-    if(!byUser[u])byUser[u]={llamadas:0,resultados:{},dias:new Set()};
-    byUser[u].emails=emailsByUser[u]||0;
-    byUser[u].wsps=wspByUser[u]||0;
-  });
-
-  const users=Object.entries(byUser).sort((a,b)=>(b[1].llamadas+b[1].emails+b[1].wsps)-(a[1].llamadas+a[1].emails+a[1].wsps));
-
-  if(!users.length){
-    wrap.innerHTML='<div style="font-size:11px;color:var(--tx3);text-align:center;padding:20px;font-family:var(--mo)">Sin actividad registrada aún.</div>';
-    return;
-  }
-
-  const maxCalls=Math.max(...users.map(([,d])=>d.llamadas),1);
-
-  wrap.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:8px">
-    ${users.map(([name,data])=>{
-      const pct=Math.round(data.llamadas/maxCalls*100);
-      const topRes=Object.entries(data.resultados).sort((a,b)=>b[1]-a[1]).slice(0,4);
-      return`<div style="background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:15px">
-        <div style="font-weight:600;font-size:14px;color:var(--tx);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--bd)">${name}</div>
-        <!-- KPIs -->
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:var(--ac);font-family:var(--mo)">${data.llamadas}</div>
-            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">Llamados</div>
-          </div>
-          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:var(--bl);font-family:var(--mo)">${data.emails||0}</div>
-            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">Emails</div>
-          </div>
-          <div style="flex:1;background:var(--sf);border-radius:6px;padding:8px;text-align:center">
-            <div style="font-size:18px;font-weight:700;color:#25d366;font-family:var(--mo)">${data.wsps||0}</div>
-            <div style="font-size:9px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;margin-top:2px">WhatsApp</div>
-          </div>
-        </div>
-        <!-- Call progress bar -->
-        ${data.llamadas?`<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:3px">
-            <span>Progreso relativo</span><span style="font-family:var(--mo)">${data.dias.size} día${data.dias.size!==1?'s':''}</span>
-          </div>
-          <div style="height:6px;background:var(--bd);border-radius:3px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:var(--ac);border-radius:3px"></div>
-          </div>
-        </div>`:''}
-        <!-- Results breakdown -->
-        ${topRes.length?`<div style="display:flex;flex-direction:column;gap:4px">
-          <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;margin-bottom:2px">Resultados de llamados</div>
-          ${topRes.map(([res,cnt])=>`<div style="display:flex;align-items:center;gap:7px;font-size:11px">
-            <span style="width:7px;height:7px;border-radius:50%;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
-            <span style="color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${res}">${res}</span>
-            <span style="font-family:var(--mo);color:var(--tx3);font-size:10px">${cnt}</span>
-          </div>`).join('')}
-        </div>`:''}
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
-
 
 // ── ROW PIN (bookmark current position) ──
 let pinnedRowId=null;
