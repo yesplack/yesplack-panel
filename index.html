@@ -1287,7 +1287,7 @@ if (location.search.includes('chofer')) {
     <div class="login-divider"></div>
     <p>Panel Administrador</p>
     <form onsubmit="loginAdmin();return false;" method="post">
-      <input type="email" id="loginEmail" name="email" placeholder="Email"
+      <input type="text" id="loginEmail" name="email" placeholder="Email"
         autocomplete="email" />
       <input type="password" id="loginPass" name="password" placeholder="Contraseña"
         autocomplete="current-password" />
@@ -30573,7 +30573,8 @@ window.estFileChange = (tipo, input) => {
         var name = f.name.toLowerCase();
         if(name.endsWith('.csv')){
           var text = e.target.result;
-          var lines = text.split(/?
+          var lines = text.split(/
+?
 /).filter(function(l){ return l.trim(); });
           cols = lines[0].split(/[,;|	]/).map(function(c){ return c.replace(/^"|"$/g,'').trim(); });
           for(var i=1;i<lines.length;i++){
