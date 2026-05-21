@@ -112,6 +112,27 @@ td:last-child{border-right:none}
 .ib-m:hover{background:rgba(59,130,246,.3)}
 .ib-a{background:rgba(234,179,8,.15);color:#fbbf24;border:1px solid rgba(234,179,8,.2)}
 .ib-a:hover{background:rgba(234,179,8,.3)}
+.ib-call{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.ib-call:hover{background:rgba(34,197,94,.3)}
+.ib-sched{background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.2)}
+.ib-sched:hover{background:rgba(168,85,247,.3)}
+.ib-hist{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
+.ib-hist:hover{background:rgba(100,116,139,.25);color:var(--tx)}
+/* LOG CANAL BADGES */
+.lc-wsp{background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
+.lc-mail{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
+.lc-llamado{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
+.lc-reagendar{background:rgba(168,85,247,.15);color:#c084fc;border:1px solid rgba(168,85,247,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
+.log-entry{background:var(--sf2);border:1px solid var(--bd);border-radius:7px;padding:11px 13px;margin-bottom:8px;position:relative}
+.log-entry:last-child{margin-bottom:0}
+.log-entry-hdr{display:flex;align-items:center;gap:7px;margin-bottom:6px;flex-wrap:wrap}
+.log-entry-ts{font-size:10px;font-family:var(--mo);color:var(--tx3)}
+.log-entry-op{font-size:10px;color:var(--tx2)}
+.log-entry-res{font-size:11px;font-weight:600;color:var(--tx);margin-bottom:3px}
+.log-entry-obs{font-size:11px;color:var(--tx2);line-height:1.5}
+.log-entry-next{font-size:10px;color:#fbbf24;margin-top:4px}
+.log-del-btn{position:absolute;top:8px;right:8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:var(--rd);border-radius:3px;padding:1px 6px;font-size:9px;cursor:pointer;font-family:var(--mo);transition:all .2s}
+.log-del-btn:hover{background:rgba(239,68,68,.25)}
 .cbtn{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;font-family:var(--mo);cursor:pointer;border:none;transition:all .2s;text-transform:uppercase;white-space:nowrap;flex-shrink:0}
 .cbtn.pend{background:rgba(34,197,94,.15);color:var(--gr);border:1px solid rgba(34,197,94,.3)}
 .cbtn.pend:hover{background:rgba(34,197,94,.28)}
@@ -2767,6 +2788,155 @@ async function deleteNewClient(id){
   </div>
 </div>
 
+<!-- MODAL: R25 WSP -->
+<div class="modal-ov" id="r25-wsp-ov">
+  <div class="modal" style="width:420px">
+    <div class="mt">💬 Registrar WhatsApp</div>
+    <div class="ms" id="r25-wsp-cname" style="margin-bottom:13px">Cliente</div>
+    <div class="mf">
+      <label class="ml">Resultado</label>
+      <select class="mi" id="r25-wsp-res">
+        <option value="">Seleccionar resultado…</option>
+        <option value="Mensaje enviado — sin respuesta">📤 Mensaje enviado — sin respuesta</option>
+        <option value="Respondió — interesado">✅ Respondió — interesado</option>
+        <option value="Respondió — no interesado">❌ Respondió — no interesado</option>
+        <option value="Respondió — solicita presupuesto">💰 Solicita presupuesto</option>
+        <option value="Respondió — volver a contactar">🔄 Volver a contactar</option>
+        <option value="Número no tiene WhatsApp">🚫 Sin WhatsApp</option>
+        <option value="Número incorrecto">⛔ Número incorrecto</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label class="ml">Observaciones</label>
+      <textarea class="mi" id="r25-wsp-obs" rows="3" placeholder="Qué se envió, respuesta del cliente…" style="resize:vertical"></textarea>
+    </div>
+    <div class="mf">
+      <label class="ml">Próximo paso</label>
+      <input class="mi" id="r25-wsp-next" type="text" placeholder="Ej: Esperar respuesta, reagendar para el martes…">
+    </div>
+    <div class="mfoot">
+      <button class="btn-g" onclick="closeModal('r25-wsp-ov')">Cancelar</button>
+      <button class="btn" onclick="r25SaveLog('wsp')" style="background:#25d366;color:#000">Guardar log</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: R25 MAIL -->
+<div class="modal-ov" id="r25-mail-ov">
+  <div class="modal" style="width:420px">
+    <div class="mt">✉️ Registrar Email</div>
+    <div class="ms" id="r25-mail-cname" style="margin-bottom:13px">Cliente</div>
+    <div class="mf">
+      <label class="ml">Resultado</label>
+      <select class="mi" id="r25-mail-res">
+        <option value="">Seleccionar resultado…</option>
+        <option value="Email enviado — sin respuesta">📤 Email enviado — sin respuesta</option>
+        <option value="Respondió — interesado">✅ Respondió — interesado</option>
+        <option value="Respondió — no interesado">❌ Respondió — no interesado</option>
+        <option value="Respondió — solicita presupuesto">💰 Solicita presupuesto</option>
+        <option value="Respondió — volver a contactar">🔄 Volver a contactar</option>
+        <option value="Email rebotado / inválido">⛔ Email rebotado / inválido</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label class="ml">Observaciones</label>
+      <textarea class="mi" id="r25-mail-obs" rows="3" placeholder="Qué se envió, respuesta del cliente…" style="resize:vertical"></textarea>
+    </div>
+    <div class="mf">
+      <label class="ml">Próximo paso</label>
+      <input class="mi" id="r25-mail-next" type="text" placeholder="Ej: Hacer seguimiento en 3 días…">
+    </div>
+    <div class="mfoot">
+      <button class="btn-g" onclick="closeModal('r25-mail-ov')">Cancelar</button>
+      <button class="btn" onclick="r25SaveLog('mail')">Guardar log</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: R25 LLAMADO -->
+<div class="modal-ov" id="r25-llamado-ov">
+  <div class="modal" style="width:420px">
+    <div class="mt">📞 Registrar llamado</div>
+    <div class="ms" id="r25-llamado-cname" style="margin-bottom:13px">Cliente</div>
+    <div class="mf">
+      <label class="ml">Resultado del llamado</label>
+      <select class="mi" id="r25-llamado-res">
+        <option value="">Seleccionar resultado…</option>
+        <option value="Contactado — interesado">✅ Contactado — interesado</option>
+        <option value="Contactado — no interesado">❌ Contactado — no interesado</option>
+        <option value="Contactado — solicita presupuesto">💰 Solicita presupuesto</option>
+        <option value="Contactado — volver a llamar">🔄 Volver a llamar</option>
+        <option value="No atiende">📵 No atiende</option>
+        <option value="Número incorrecto">🚫 Número incorrecto</option>
+        <option value="Buzón de voz">📣 Buzón de voz</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label class="ml">Observaciones</label>
+      <textarea class="mi" id="r25-llamado-obs" rows="3" placeholder="Detalles del llamado, lo que mencionó el cliente…" style="resize:vertical"></textarea>
+    </div>
+    <div class="mf">
+      <label class="ml">Próximo paso</label>
+      <input class="mi" id="r25-llamado-next" type="text" placeholder="Ej: Enviar presupuesto, reagendar para el lunes…">
+    </div>
+    <div style="background:rgba(255,214,0,.07);border:1px solid rgba(255,214,0,.2);border-radius:5px;padding:8px 11px;font-size:11px;color:#FFD600;margin-bottom:12px;line-height:1.5">
+      ⚠️ Guardar marca al cliente como <strong>LLAMADO</strong>.
+    </div>
+    <div class="mfoot">
+      <button class="btn-g" onclick="closeModal('r25-llamado-ov')">Cancelar</button>
+      <button class="btn" onclick="r25SaveLog('llamado')">Confirmar llamado</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: R25 REAGENDAR -->
+<div class="modal-ov" id="r25-reagendar-ov">
+  <div class="modal" style="width:420px">
+    <div class="mt">📅 Reagendar contacto</div>
+    <div class="ms" id="r25-reagendar-cname" style="margin-bottom:13px">Cliente</div>
+    <div class="mrow">
+      <div class="mf">
+        <label class="ml">Fecha</label>
+        <input class="mi" id="r25-reagendar-fecha" type="date">
+      </div>
+      <div class="mf">
+        <label class="ml">Hora</label>
+        <input class="mi" id="r25-reagendar-hora" type="time">
+      </div>
+    </div>
+    <div class="mf">
+      <label class="ml">Canal preferido</label>
+      <select class="mi" id="r25-reagendar-canal">
+        <option value="llamado">📞 Llamado</option>
+        <option value="wsp">💬 WhatsApp</option>
+        <option value="mail">✉️ Email</option>
+      </select>
+    </div>
+    <div class="mf">
+      <label class="ml">Nota</label>
+      <input class="mi" id="r25-reagendar-nota" type="text" placeholder="Ej: Llamar a la mañana, preguntar por el gerente…">
+    </div>
+    <div class="mfoot">
+      <button class="btn-g" onclick="closeModal('r25-reagendar-ov')">Cancelar</button>
+      <button class="btn" onclick="r25SaveLog('reagendar')" style="background:var(--pu);color:#fff">Guardar agenda</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: R25 HISTORIAL -->
+<div class="modal-ov" id="r25-historial-ov">
+  <div class="modal" style="width:540px;max-height:82vh;display:flex;flex-direction:column">
+    <div style="flex-shrink:0">
+      <div class="mt">📋 Historial de contacto</div>
+      <div class="ms" id="r25-historial-cname" style="margin-bottom:13px">Cliente</div>
+    </div>
+    <div id="r25-historial-content" style="overflow-y:auto;flex:1;min-height:60px;padding-right:4px"></div>
+    <div class="mfoot" style="flex-shrink:0">
+      <button class="btn-g" onclick="closeModal('r25-historial-ov')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   // ── DUMMY para que no crashee el código del IIFE original que se eliminó ──
@@ -2939,9 +3109,15 @@ async function deleteNewClient(id){
       var noteHtml='<span class="nd'+(note?'':' emp')+'" onclick="r25EditNote(\''+escId+'\',this)" title="'+(note?esc(note):'Agregar nota')+'">'+
         (note?esc(note):'+ nota...')+'</span>';
 
-      // LLAMAR btn
-      var callBtn='<button class="cbtn '+(isCalled?'done':'pend')+'" onclick="r25ToggleCalled(\''+escId+'\',this)">'+
-        (isCalled?'&#10003; LLAMADO':'&#128222; LLAMAR')+'</button>';
+      // 4 botones de acción
+      var escNom=esc(nom), escTel=esc(tel), escEmail=esc(email);
+      var actBtns='<div class="ag">'+
+        '<button class="ib ib-w" title="WhatsApp" onclick="r25OpenWsp(\''+escId+'\',\''+escNom+'\',\''+escTel+'\')">&#128172;</button>'+
+        '<button class="ib ib-m" title="Email" onclick="r25OpenMail(\''+escId+'\',\''+escNom+'\',\''+escEmail+'\')">&#9993;</button>'+
+        '<button class="ib ib-call" title="Llamado" onclick="r25OpenLlamado(\''+escId+'\',\''+escNom+'\')">&#128222;</button>'+
+        '<button class="ib ib-sched" title="Reagendar" onclick="r25OpenReagendar(\''+escId+'\',\''+escNom+'\')">&#128197;</button>'+
+        '<button class="ib ib-hist" title="Historial" onclick="r25OpenHistorial(\''+escId+'\',\''+escNom+'\')">&#128203;</button>'+
+        '</div>';
 
       return '<tr'+(isCalled?' class="called"':'')+' id="r25r-'+escId+'">'+
         '<td style="color:var(--tx3);font-family:var(--mo);font-size:10px">'+esc(String(num))+'</td>'+
@@ -2954,7 +3130,7 @@ async function deleteNewClient(id){
         '<td title="'+esc(loc)+'">'+esc(loc)+'</td>'+
         '<td title="'+esc(prov)+'">'+esc(prov)+'</td>'+
         '<td>'+noteHtml+'</td>'+
-        '<td><div class="ag">'+callBtn+'</div></td>'+
+        '<td><div class="ag">'+actBtns+'</div>'+(isCalled?'<span style="font-size:9px;color:var(--gr);font-family:var(--mo);margin-left:2px">&#10003;</span>':'')+'</td>'+
         '</tr>';
     }).join('');
 
@@ -3008,7 +3184,125 @@ async function deleteNewClient(id){
     },{onConflict:'client_id'}).then(function(r){if(r.error)showToast('Error guardando nota','err');});
   };
 
-  // ── EXPORT CSV ───────────────────────────────────────────────────────────────
+  // ── ESTADO DE MODAL ACTIVO ────────────────────────────────────────────────────
+  var _logCtx={id:'',nom:'',canal:''};
+
+  // ── ABRIR MODALES ─────────────────────────────────────────────────────────────
+  window.r25OpenWsp=function(id,nom,tel){
+    _logCtx={id:id,nom:nom,canal:'wsp'};
+    g('r25-wsp-cname').textContent=nom;
+    g('r25-wsp-res').value='';g('r25-wsp-obs').value='';g('r25-wsp-next').value='';
+    openModal('r25-wsp-ov');
+  };
+
+  window.r25OpenMail=function(id,nom,email){
+    _logCtx={id:id,nom:nom,canal:'mail'};
+    g('r25-mail-cname').textContent=nom;
+    g('r25-mail-res').value='';g('r25-mail-obs').value='';g('r25-mail-next').value='';
+    openModal('r25-mail-ov');
+  };
+
+  window.r25OpenLlamado=function(id,nom){
+    _logCtx={id:id,nom:nom,canal:'llamado'};
+    g('r25-llamado-cname').textContent=nom;
+    g('r25-llamado-res').value='';g('r25-llamado-obs').value='';g('r25-llamado-next').value='';
+    openModal('r25-llamado-ov');
+  };
+
+  window.r25OpenReagendar=function(id,nom){
+    _logCtx={id:id,nom:nom,canal:'reagendar'};
+    g('r25-reagendar-cname').textContent=nom;
+    g('r25-reagendar-fecha').value='';g('r25-reagendar-hora').value='';
+    g('r25-reagendar-nota').value='';g('r25-reagendar-canal').value='llamado';
+    openModal('r25-reagendar-ov');
+  };
+
+  window.r25OpenHistorial=function(id,nom){
+    g('r25-historial-cname').textContent=nom;
+    var cont=g('r25-historial-content');
+    cont.innerHTML='<div style="text-align:center;padding:20px;color:var(--tx3);font-family:var(--mo);font-size:11px"><span class="spin"></span> Cargando…</div>';
+    openModal('r25-historial-ov');
+    db.from('contact_logs').select('*').eq('client_id',id).order('created_at',{ascending:false})
+      .then(function(res){
+        if(res.error){cont.innerHTML='<div style="color:var(--rd);font-size:12px;padding:12px">Error cargando logs: '+esc(res.error.message)+'</div>';return;}
+        var logs=res.data||[];
+        if(!logs.length){cont.innerHTML='<div style="text-align:center;padding:30px;color:var(--tx3);font-size:12px">Sin registros aún.</div>';return;}
+        var isAdmin=(currentRole==='admin'||currentRole==='maestro');
+        cont.innerHTML=logs.map(function(l){
+          var canalLabel={wsp:'💬 WSP',mail:'✉️ MAIL',llamado:'📞 LLAMADO',reagendar:'📅 REAGENDAR'}[l.canal]||l.canal;
+          var canalClass='lc-'+(l.canal||'llamado');
+          var ts=l.created_at?new Date(l.created_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+          var delBtn=isAdmin?'<button class="log-del-btn" onclick="r25DelLog('+l.id+',this.closest(\'.log-entry\'))">✕ borrar</button>':'';
+          var extra='';
+          if(l.canal==='reagendar'&&l.fecha_reagenda){
+            extra='<div style="font-size:10px;color:#c084fc;margin-top:4px">📅 '+esc(l.fecha_reagenda)+(l.hora_reagenda?' '+esc(l.hora_reagenda):'')+(l.canal_preferido?' · '+esc(l.canal_preferido):'')+'</div>';
+          }
+          return '<div class="log-entry">'+
+            delBtn+
+            '<div class="log-entry-hdr"><span class="'+canalClass+'">'+canalLabel+'</span><span class="log-entry-ts">'+ts+'</span><span class="log-entry-op">'+esc(l.operador||'—')+'</span></div>'+
+            (l.resultado?'<div class="log-entry-res">'+esc(l.resultado)+'</div>':'')+
+            (l.observaciones?'<div class="log-entry-obs">'+esc(l.observaciones)+'</div>':'')+
+            (l.proximo_paso?'<div class="log-entry-next">→ '+esc(l.proximo_paso)+'</div>':'')+
+            extra+
+            '</div>';
+        }).join('');
+      });
+  };
+
+  // ── GUARDAR LOG ───────────────────────────────────────────────────────────────
+  window.r25SaveLog=function(canal){
+    var id=_logCtx.id, nom=_logCtx.nom;
+    var operador=currentUser?(currentUser.display_name||currentUser.username):'';
+    var payload={client_id:id,lista:'r25',canal:canal,operador:operador};
+
+    if(canal==='wsp'){
+      payload.resultado=g('r25-wsp-res').value;
+      payload.observaciones=g('r25-wsp-obs').value.trim();
+      payload.proximo_paso=g('r25-wsp-next').value.trim();
+      closeModal('r25-wsp-ov');
+    } else if(canal==='mail'){
+      payload.resultado=g('r25-mail-res').value;
+      payload.observaciones=g('r25-mail-obs').value.trim();
+      payload.proximo_paso=g('r25-mail-next').value.trim();
+      closeModal('r25-mail-ov');
+    } else if(canal==='llamado'){
+      payload.resultado=g('r25-llamado-res').value;
+      payload.observaciones=g('r25-llamado-obs').value.trim();
+      payload.proximo_paso=g('r25-llamado-next').value.trim();
+      // Marcar como llamado
+      R.called[id]=true;
+      var row=g('r25r-'+id); if(row) row.classList.add('called');
+      db.from('client_states').upsert({
+        client_id:id,called:true,note:R.notes[id]||'',
+        updated_by:operador,updated_at:new Date().toISOString()
+      },{onConflict:'client_id'}).then(function(){});
+      closeModal('r25-llamado-ov');
+      r25Render();
+    } else if(canal==='reagendar'){
+      payload.resultado='Reagendado';
+      payload.observaciones=g('r25-reagendar-nota').value.trim();
+      payload.fecha_reagenda=g('r25-reagendar-fecha').value||null;
+      payload.hora_reagenda=g('r25-reagendar-hora').value||null;
+      payload.canal_preferido=g('r25-reagendar-canal').value;
+      closeModal('r25-reagendar-ov');
+    }
+
+    db.from('contact_logs').insert(payload).then(function(res){
+      if(res.error){showToast('Error guardando log: '+res.error.message,'err');}
+      else{showToast('✓ Log guardado — '+canal.toUpperCase(),'ok');}
+    });
+  };
+
+  // ── BORRAR LOG (solo admin) ───────────────────────────────────────────────────
+  window.r25DelLog=function(logId,el){
+    if(!confirm('¿Borrar este registro?')) return;
+    db.from('contact_logs').delete().eq('id',logId).then(function(res){
+      if(res.error){showToast('Error borrando: '+res.error.message,'err');}
+      else{if(el)el.remove();showToast('Registro eliminado','ok');}
+    });
+  };
+
+
   window.r25Export=function(){
     if(!R.filtered.length)return;
     var cols=['NUMERO','NOMBRE','IVANOM','CUIT','TELEFONO','EMAIL','LOCALIDAD','PRONOM','CONTACTO'];
