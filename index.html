@@ -697,10 +697,10 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
 
 <!-- MODAL: REPORTE DE LLAMADOS -->
 <div class="modal-ov" id="calls-report-ov" style="z-index:600">
-  <div class="modal" style="width:820px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column">
+  <div class="modal" style="width:900px;max-width:97vw;max-height:88vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0">
       <div>
-        <div class="mt">📊 Resumen de llamados</div>
+        <div class="mt">📊 Resumen de contactos</div>
         <div class="ms" id="report-summary" style="margin-bottom:0">Cargando…</div>
       </div>
       <div style="display:flex;gap:7px;align-items:center">
@@ -708,33 +708,35 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
         <button class="btn-g" onclick="closeModal('calls-report-ov')">✕</button>
       </div>
     </div>
-
     <!-- Filters -->
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;flex-shrink:0;padding-bottom:12px;border-bottom:1px solid var(--bd)">
+      <div class="fg" style="min-width:110px">
+        <div class="fl">Canal</div>
+        <select class="fs" id="rep-canal" onchange="filterReport()" style="width:100%">
+          <option value="">Todos</option>
+          <option value="llamado">📞 Llamado</option>
+          <option value="wsp">💬 WhatsApp</option>
+          <option value="mail">✉️ Email</option>
+          <option value="reagendar">📅 Reagendar</option>
+        </select>
+      </div>
       <div class="fg" style="flex:1;min-width:130px">
         <div class="fl">Operador</div>
         <select class="fs" id="rep-operador" onchange="filterReport()" style="width:100%">
           <option value="">Todos</option>
         </select>
       </div>
-      <div class="fg" style="flex:1;min-width:150px">
+      <div class="fg" style="flex:1;min-width:130px">
         <div class="fl">Resultado</div>
         <select class="fs" id="rep-resultado" onchange="filterReport()" style="width:100%">
           <option value="">Todos</option>
-          <option value="Contactado — interesado">✅ Interesado</option>
-          <option value="Contactado — no interesado">❌ No interesado</option>
-          <option value="Contactado — solicita presupuesto">💰 Solicita presupuesto</option>
-          <option value="Contactado — volver a llamar">🔄 Volver a llamar</option>
-          <option value="No atiende">📵 No atiende</option>
-          <option value="Número incorrecto">🚫 Número incorrecto</option>
-          <option value="Buzón de voz">📣 Buzón de voz</option>
         </select>
       </div>
-      <div class="fg" style="flex:1;min-width:120px">
+      <div class="fg" style="min-width:120px">
         <div class="fl">Desde</div>
         <input class="fi" type="date" id="rep-desde" onchange="filterReport()" style="width:100%">
       </div>
-      <div class="fg" style="flex:1;min-width:120px">
+      <div class="fg" style="min-width:120px">
         <div class="fl">Hasta</div>
         <input class="fi" type="date" id="rep-hasta" onchange="filterReport()" style="width:100%">
       </div>
@@ -742,15 +744,14 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
         <button class="btn-g" onclick="clearReportFilters()">↺</button>
       </div>
     </div>
-
     <!-- Stats strip -->
-    <div id="rep-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;flex-shrink:0"></div>
-
+    <div id="rep-stats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;flex-shrink:0"></div>
     <!-- Table -->
     <div style="overflow-y:auto;flex:1">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead>
           <tr style="background:var(--sf2);position:sticky;top:0;z-index:5">
+            <th style="padding:7px 10px;text-align:left;font-size:9px;font-family:var(--mo);text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap;width:80px">Canal</th>
             <th style="padding:7px 10px;text-align:left;font-size:9px;font-family:var(--mo);text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Cliente</th>
             <th style="padding:7px 10px;text-align:left;font-size:9px;font-family:var(--mo);text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Resultado</th>
             <th style="padding:7px 10px;text-align:left;font-size:9px;font-family:var(--mo);text-transform:uppercase;color:var(--tx3);border-bottom:1px solid var(--bd);white-space:nowrap">Observaciones</th>
@@ -2192,44 +2193,79 @@ async function openCallsReport(){
   document.getElementById('rep-desde').value='';
   document.getElementById('rep-hasta').value='';
   document.getElementById('rep-resultado').value='';
+  document.getElementById('rep-canal').value='';
   document.getElementById('rep-operador').innerHTML='<option value="">Todos</option>';
 
   try{
-    const {data,error}=await db.from('call_logs')
-      .select('client_id,resultado,observaciones,proximo_paso,operador,created_at')
-      .order('created_at',{ascending:false})
-      .limit(5000);
-    if(error)throw error;
-    // Update cache
+    // Load from BOTH tables in parallel with timeout
+    const timeout=(ms,label)=>new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timeout: '+label)),ms));
+    const [clRes, ctRes] = await Promise.all([
+      Promise.race([
+        db.from('call_logs').select('client_id,resultado,observaciones,proximo_paso,operador,created_at').order('created_at',{ascending:false}).limit(5000),
+        timeout(8000,'call_logs')
+      ]),
+      Promise.race([
+        db.from('contact_logs').select('client_id,lista,canal,resultado,observaciones,proximo_paso,operador,created_at').order('created_at',{ascending:false}).limit(5000),
+        timeout(8000,'contact_logs')
+      ])
+    ]);
+
+    if(clRes.error) console.warn('call_logs error:',clRes.error.message);
+    if(ctRes.error) console.warn('contact_logs error:',ctRes.error.message);
+
+    const callData = clRes.data||[];
+    const contData = ctRes.data||[];
+
+    // Rebuild callLogs cache from call_logs
     callLogs={};
-    (data||[]).forEach(log=>{
+    callData.forEach(log=>{
       if(!callLogs[log.client_id])callLogs[log.client_id]=[];
       callLogs[log.client_id].push(log);
     });
     callLogsLoaded=true;
-    // Build flat list with client names
-    reportLogs=[];
-    Object.entries(callLogs).forEach(([clientId,logs])=>{
-      const row=ROWS.find(r=>r[0]===clientId);
-      const clientName=row?row[1]:clientId;
-      logs.forEach(log=>reportLogs.push({...log,clientName,clientId}));
-    });
-    reportLogs.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
+    // Helper to resolve client name
+    const clientName=(id)=>{
+      const row=ROWS.find(r=>r[0]===id);
+      return row?row[1]:(id||'—');
+    };
+
+    // Normalize call_logs → canal='llamado', lista='om'
+    const fromCallLogs = callData.map(l=>({
+      ...l, canal:'llamado', lista:'om', clientName:clientName(l.client_id), clientId:l.client_id
+    }));
+    // Normalize contact_logs
+    const fromContLogs = contData.map(l=>({
+      ...l, clientName:clientName(l.client_id), clientId:l.client_id
+    }));
+
+    reportLogs = [...fromCallLogs, ...fromContLogs].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
     // Populate operador filter
     const ops=[...new Set(reportLogs.map(l=>l.operador).filter(Boolean))].sort();
     const opSel=document.getElementById('rep-operador');
     opSel.innerHTML='<option value="">Todos</option>';
     ops.forEach(op=>{const o=document.createElement('option');o.value=op;o.textContent=op;opSel.appendChild(o);});
+
+    // Populate resultado filter dynamically
+    const resultados=[...new Set(reportLogs.map(l=>l.resultado).filter(Boolean))].sort();
+    const resSel=document.getElementById('rep-resultado');
+    resSel.innerHTML='<option value="">Todos</option>';
+    resultados.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;resSel.appendChild(o);});
+
     filterReport();
   }catch(e){
-    document.getElementById('rep-summary').textContent='Error: '+e.message;
-    document.getElementById('rep-tbody').innerHTML=`<tr><td colspan="6" style="color:var(--rd);padding:20px;text-align:center;font-size:12px">${e.message}</td></tr>`;
+    document.getElementById('rep-summary').textContent='Error cargando datos: '+e.message;
+    document.getElementById('rep-tbody').innerHTML=`<tr><td colspan="7" style="color:var(--rd);padding:20px;text-align:center;font-size:12px">
+      ${e.message}<br><span style="color:var(--tx3);font-size:10px">Verificá que las tablas call_logs y contact_logs existan en Supabase con políticas SELECT.</span>
+    </td></tr>`;
   }
 }
 
 function clearReportFilters(){
   document.getElementById('rep-operador').value='';
   document.getElementById('rep-resultado').value='';
+  document.getElementById('rep-canal').value='';
   document.getElementById('rep-desde').value='';
   document.getElementById('rep-hasta').value='';
   filterReport();
@@ -2238,35 +2274,37 @@ function clearReportFilters(){
 function filterReport(){
   const op=document.getElementById('rep-operador').value;
   const res=document.getElementById('rep-resultado').value;
+  const canal=document.getElementById('rep-canal').value;
   const desde=document.getElementById('rep-desde').value;
   const hasta=document.getElementById('rep-hasta').value;
-
   const filtered=reportLogs.filter(l=>{
     if(op&&l.operador!==op)return false;
     if(res&&l.resultado!==res)return false;
-    if(desde&&l.created_at.slice(0,10)<desde)return false;
-    if(hasta&&l.created_at.slice(0,10)>hasta)return false;
+    if(canal&&l.canal!==canal)return false;
+    if(desde&&(l.created_at||'').slice(0,10)<desde)return false;
+    if(hasta&&(l.created_at||'').slice(0,10)>hasta)return false;
     return true;
   });
-
   renderReport(filtered);
 }
+
+const CANAL_LABELS={llamado:'📞 Llamado',wsp:'💬 WSP',mail:'✉️ Mail',reagendar:'📅 Reagendar'};
+const CANAL_COLORS={llamado:'#4ade80',wsp:'#25d366',mail:'#60a5fa',reagendar:'#c084fc'};
 
 function renderReport(logs){
   const tbody=document.getElementById('rep-tbody');
   const empty=document.getElementById('rep-empty');
   const summary=document.getElementById('rep-summary');
+  summary.textContent=`${logs.length.toLocaleString('es')} registro${logs.length!==1?'s':''} encontrado${logs.length!==1?'s':''}`;
 
-  summary.textContent=`${logs.length} registro${logs.length!==1?'s':''} encontrado${logs.length!==1?'s':''}`;
-
-  // Stats strip by resultado
-  const byRes={};
-  logs.forEach(l=>{byRes[l.resultado]=(byRes[l.resultado]||0)+1;});
+  // Stats strip — by canal
+  const byCanal={};
+  logs.forEach(l=>{byCanal[l.canal||'llamado']=(byCanal[l.canal||'llamado']||0)+1;});
   const statsEl=document.getElementById('rep-stats');
-  statsEl.innerHTML=Object.entries(byRes).sort((a,b)=>b[1]-a[1]).map(([res,cnt])=>`
-    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:6px 10px;font-size:11px;display:flex;align-items:center;gap:6px;white-space:nowrap">
-      <span style="width:8px;height:8px;border-radius:50%;background:${RESULTADO_COLORS[res]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
-      <span style="color:var(--tx2)">${res}</span>
+  statsEl.innerHTML=Object.entries(byCanal).sort((a,b)=>b[1]-a[1]).map(([c,cnt])=>`
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:5px 10px;font-size:11px;display:flex;align-items:center;gap:6px;white-space:nowrap">
+      <span style="width:8px;height:8px;border-radius:50%;background:${CANAL_COLORS[c]||'var(--tx3)'};flex-shrink:0;display:inline-block"></span>
+      <span style="color:var(--tx2)">${CANAL_LABELS[c]||c}</span>
       <strong style="color:var(--tx);font-family:var(--mo)">${cnt}</strong>
     </div>`).join('');
 
@@ -2274,20 +2312,19 @@ function renderReport(logs){
   empty.style.display='none';
 
   tbody.innerHTML=logs.map(l=>{
-    const color=RESULTADO_COLORS[l.resultado]||'var(--tx3)';
-    const fecha=new Date(l.created_at).toLocaleString('es',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const canalColor=CANAL_COLORS[l.canal]||'var(--tx3)';
+    const canalLbl=CANAL_LABELS[l.canal]||l.canal||'—';
+    const fecha=l.created_at?new Date(l.created_at).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
     return`<tr style="border-bottom:1px solid rgba(42,48,72,.5);transition:background .1s" onmouseover="this.style.background='var(--sf2)'" onmouseout="this.style.background=''">
-      <td style="padding:8px 10px;font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.clientName}">${l.clientName}</td>
-      <td style="padding:8px 10px;white-space:nowrap">
-        <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px">
-          <span style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;display:inline-block"></span>
-          ${l.resultado}
-        </span>
+      <td style="padding:6px 10px;white-space:nowrap">
+        <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mo);background:rgba(0,0,0,.2);border:1px solid ${canalColor}33;color:${canalColor};border-radius:4px;padding:1px 6px">${canalLbl}</span>
       </td>
-      <td style="padding:8px 10px;color:var(--tx2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.observaciones||''}">${l.observaciones||'<span style="color:var(--tx3);font-style:italic">—</span>'}</td>
-      <td style="padding:8px 10px;color:var(--ye);font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.proximo_paso||''}">${l.proximo_paso||'<span style="color:var(--tx3);font-style:italic">—</span>'}</td>
-      <td style="padding:8px 10px;font-family:var(--mo);font-size:10px;color:var(--tx3);white-space:nowrap">${l.operador||'—'}</td>
-      <td style="padding:8px 10px;font-family:var(--mo);font-size:10px;color:var(--tx3);white-space:nowrap">${fecha}</td>
+      <td style="padding:6px 10px;font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.clientName}">${l.clientName}</td>
+      <td style="padding:6px 10px;font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.resultado||''}">${l.resultado||'<span style="color:var(--tx3);font-style:italic">—</span>'}</td>
+      <td style="padding:6px 10px;color:var(--tx2);font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.observaciones||''}">${l.observaciones||'<span style="color:var(--tx3);font-style:italic">—</span>'}</td>
+      <td style="padding:6px 10px;color:#fbbf24;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${l.proximo_paso||''}">${l.proximo_paso||'<span style="color:var(--tx3);font-style:italic">—</span>'}</td>
+      <td style="padding:6px 10px;font-family:var(--mo);font-size:10px;color:var(--tx3);white-space:nowrap">${l.operador||'—'}</td>
+      <td style="padding:6px 10px;font-family:var(--mo);font-size:10px;color:var(--tx3);white-space:nowrap">${fecha}</td>
     </tr>`;
   }).join('');
 }
@@ -2295,24 +2332,26 @@ function renderReport(logs){
 function exportCallsCSV(){
   const op=document.getElementById('rep-operador').value;
   const res=document.getElementById('rep-resultado').value;
+  const canal=document.getElementById('rep-canal').value;
   const desde=document.getElementById('rep-desde').value;
   const hasta=document.getElementById('rep-hasta').value;
   const filtered=reportLogs.filter(l=>{
     if(op&&l.operador!==op)return false;
     if(res&&l.resultado!==res)return false;
-    if(desde&&l.created_at.slice(0,10)<desde)return false;
-    if(hasta&&l.created_at.slice(0,10)>hasta)return false;
+    if(canal&&l.canal!==canal)return false;
+    if(desde&&(l.created_at||'').slice(0,10)<desde)return false;
+    if(hasta&&(l.created_at||'').slice(0,10)>hasta)return false;
     return true;
   });
-  const headers=['Cliente','Resultado','Observaciones','Proximo Paso','Operador','Fecha'];
+  const headers=['Canal','Cliente','Resultado','Observaciones','Proximo Paso','Operador','Fecha'];
   const rows=[headers.join(','),...filtered.map(l=>{
-    const fecha=new Date(l.created_at).toLocaleString('es');
-    return[l.clientName,l.resultado,l.observaciones||'',l.proximo_paso||'',l.operador||'',fecha]
+    const fecha=l.created_at?new Date(l.created_at).toLocaleString('es-AR'):'';
+    return[l.canal||'llamado',l.clientName,l.resultado||'',l.observaciones||'',l.proximo_paso||'',l.operador||'',fecha]
       .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');
   })];
   const blob=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download='reporte_llamados.csv';a.click();
+  a.download='reporte_contactos.csv';a.click();
   showToast('✓ CSV descargado');
 }
 
