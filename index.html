@@ -1264,7 +1264,7 @@ function switchView(v,btn){
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
   if(v==='newcli')initNewCliForm();
-  if(v==='listar25')listaR25Cargar();
+  if(v==='listar25')r25Init();
 }
 
 // ── STATS ──
@@ -2700,274 +2700,385 @@ async function deleteNewClient(id){
 
 <!-- ===== VIEW LISTA R25 ===== -->
 <div id="view-listar25" class="view">
-  <div class="lista-wrap">
-    <div class="lista-header-bar">
-      <span class="lista-title" style="color:#f87171">&#128212; Lista R25</span>
-      <span class="lista-badge badge-r25" id="listar25-badge">Sin datos</span>
-      <button onclick="document.getElementById('listar25-file').click()" style="background:rgba(248,113,113,.12);color:#f87171;border:1px solid rgba(248,113,113,.3);border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer">&#128194; Cargar Excel</button>
-      <input type="file" id="listar25-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="listaCargar('r25',this)">
-      <button onclick="listaExportar('r25')" id="listar25-exp-btn" style="display:none;background:rgba(248,113,113,.07);color:#f87171;border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">&#11015;&#65039; CSV</button>
-      <button onclick="listaBorrar('r25')" id="listar25-del-btn" style="display:none;background:rgba(248,113,113,.07);color:#f87171;border:1px solid rgba(248,113,113,.2);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">&#128465;</button>
+  <!-- Filter bar — idéntica a LISTA OM -->
+  <div class="fbar">
+    <div class="fg"><div class="fl">Buscar</div><input class="fi" id="r25-search" placeholder="Nombre, CUIT, dirección…" oninput="r25Apply()"></div>
+    <div class="fg"><div class="fl">Condición IVA</div><select class="fs" id="r25-f-iva" onchange="r25Apply()"><option value="">Todas</option></select></div>
+    <div class="fg"><div class="fl">Provincia</div><select class="fs" id="r25-f-prov" onchange="r25Apply()"><option value="">Todas</option></select></div>
+    <div class="fg"><div class="fl">Teléfono</div><select class="fs" id="r25-f-tel" onchange="r25Apply()" style="min-width:105px"><option value="">Todos</option><option value="con">Con tel.</option><option value="sin">Sin tel.</option></select></div>
+    <div class="fg"><div class="fl">Estado</div><label class="ckw"><input type="checkbox" id="r25-f-pend" onchange="r25Apply()"> Pendientes</label></div>
+    <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
+      <button class="btn-g" onclick="r25ResetFilters()">&#8635; Limpiar</button>
+      <button class="btn-g" onclick="openModal('r25-import-ov')" style="border-color:rgba(248,113,113,.4);color:#f87171">&#128229; Importar</button>
+      <button class="btn" onclick="r25Export()">&#11015; CSV</button>
     </div>
-    <div id="listar25-upload" class="lista-upload-zone"
+  </div>
+  <!-- Results bar -->
+  <div class="rbar">
+    <div class="rinfo">Mostrando <strong id="r25-shr">—</strong> de <strong id="r25-sht">0</strong></div>
+    <div class="pgn" id="r25-pgn"></div>
+  </div>
+  <!-- Table -->
+  <div class="twrap">
+    <table>
+      <colgroup>
+        <col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4">
+        <col class="c5"><col class="c6"><col class="c7"><col class="c8">
+      </colgroup>
+      <thead><tr>
+        <th onclick="r25Sort(0)">N° <span id="r25-s0"></span></th>
+        <th onclick="r25Sort(1)">Nombre <span id="r25-s1"></span></th>
+        <th onclick="r25Sort(2)">Cond. IVA <span id="r25-s2"></span></th>
+        <th>Teléfono</th>
+        <th>Email</th>
+        <th onclick="r25Sort(5)">Localidad <span id="r25-s5"></span></th>
+        <th onclick="r25Sort(6)">Provincia <span id="r25-s6"></span></th>
+        <th>Notas</th>
+        <th>Acciones</th>
+      </tr></thead>
+      <tbody id="r25-tbody"></tbody>
+    </table>
+    <div id="r25-empty" class="empty" style="display:none"><div class="empty-ic">&#128269;</div><div>Sin resultados.</div></div>
+    <div id="r25-loading" class="empty"><div class="empty-ic"><span class="spin"></span></div><div style="font-family:var(--mo);font-size:12px;color:var(--tx3)">Cargando lista R25…</div></div>
+  </div>
+</div>
+
+<!-- MODAL: IMPORTAR LISTA R25 -->
+<div class="modal-ov" id="r25-import-ov">
+  <div class="modal" style="width:480px">
+    <div class="mt" style="color:#f87171">&#128229; Importar Lista R25</div>
+    <div class="ms">El Excel reemplaza todos los datos actuales de R25 en Supabase.</div>
+    <div id="r25-imp-zone" class="lista-upload-zone" style="border-color:rgba(248,113,113,.4);margin-bottom:0"
       ondragover="event.preventDefault();this.classList.add('drag-rojo')"
       ondragleave="this.classList.remove('drag-rojo')"
-      ondrop="event.preventDefault();this.classList.remove('drag-rojo');listaCargar('r25',null,event.dataTransfer.files[0])">
+      ondrop="event.preventDefault();this.classList.remove('drag-rojo');r25ImportFile(event.dataTransfer.files[0])">
       <div style="font-size:32px;margin-bottom:8px">&#128212;</div>
-      <div style="font-weight:700;font-size:13px;margin-bottom:4px">Arrastra el Excel aqui o hace click en "Cargar Excel"</div>
-      <div style="font-size:11px;color:var(--tx3)">Soporta .xlsx &middot; .xls &middot; .csv &middot; Procesado localmente en tu navegador</div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px">Arrastrá el Excel aquí</div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Soporta .xlsx &middot; .xls &middot; .csv</div>
+      <button onclick="document.getElementById('r25-imp-file').click()" style="background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.4);border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">&#128194; Seleccionar archivo</button>
+      <input type="file" id="r25-imp-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="r25ImportFile(this.files[0]);this.value=''">
     </div>
-    <div id="listar25-data" style="display:none">
-      <div class="lista-searchbar">
-        <input type="text" id="listar25-q" placeholder="Buscar en cualquier columna..." oninput="listaFiltrar('r25')" class="rojo">
-        <select id="listar25-col-filter" onchange="listaFiltrar('r25')" style="max-width:180px"><option value="">Todas las columnas</option></select>
-        <select id="listar25-page-size" onchange="listaPaginar('r25',1)" style="max-width:90px">
-          <option value="50">50 filas</option><option value="100">100 filas</option>
-          <option value="200">200 filas</option><option value="500">500 filas</option>
-        </select>
-        <span id="listar25-count" style="font-size:11px;color:var(--tx3);white-space:nowrap"></span>
-      </div>
-      <div style="margin-bottom:6px;font-size:10px;color:var(--tx3)">Columnas visibles:</div>
-      <div class="lista-col-toggle" id="listar25-col-toggle"></div>
-      <div class="lista-table-wrap">
-        <table class="lista-table rojo"><thead id="listar25-thead"></thead><tbody id="listar25-tbody"></tbody></table>
-        <div class="lista-pagination" id="listar25-pager"></div>
-      </div>
+    <div id="r25-imp-prog" style="display:none;text-align:center;padding:20px;font-family:var(--mo);font-size:12px;color:var(--tx2)">
+      <span class="spin"></span> <span id="r25-imp-msg">Procesando…</span>
+    </div>
+    <div class="mfoot" style="margin-top:14px">
+      <button class="btn-g" onclick="closeModal('r25-import-ov')">Cerrar</button>
     </div>
   </div>
 </div>
 
 <script>
 (function(){
+  // ── DUMMY para que no crashee el código del IIFE original que se eliminó ──
   var STATE={
     om:{rows:[],filtered:[],cols:[],visibleCols:[],page:1},
     r25:{rows:[],filtered:[],cols:[],visibleCols:[],page:1,loaded:false}
   };
-  var R25_BATCH = 500; // filas por batch al guardar en Supabase
+})();
+</script>
 
-  function ps(id){return parseInt(document.getElementById('lista'+id+'-page-size').value)||50;}
-  function esc(s){return(s===null||s===undefined?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-  function setBadge(id,txt){document.getElementById('lista'+id+'-badge').textContent=txt;}
-
-  // ── CARGAR EXCEL ────────────────────────────────────────────────────────────
-  window.listaCargar=function(id,inputEl,file){
-    var f=file||(inputEl&&inputEl.files&&inputEl.files[0]);
-    if(!f)return;
-    setBadge(id,'Leyendo...');
-    var reader=new FileReader();
-    reader.onload=function(e){
-      try{
-        var rows=[],cols=[];
-        if(f.name.toLowerCase().endsWith('.csv')){
-          var lines=e.target.result.split(/
-?
-/).filter(function(l){return l.trim();});
-          cols=lines[0].split(/[,;|	]/).map(function(c){return c.replace(/^"|"$/g,'').trim();});
-          for(var i=1;i<lines.length;i++){
-            var vals=lines[i].split(/[,;|	]/).map(function(v){return v.replace(/^"|"$/g,'').trim();});
-            var row={};cols.forEach(function(c,j){row[c]=vals[j]||'';});rows.push(row);
-          }
-        }else{
-          var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',sheetRows:0});
-          var ws=wb.Sheets[wb.SheetNames[0]];
-          var data=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
-          if(!data.length){alert('La hoja esta vacia');return;}
-          cols=Object.keys(data[0]);rows=data;
-        }
-        if(id==='r25'){
-          // Guardar en Supabase
-          listaR25Guardar(rows, cols);
-        } else {
-          listaActivar(id, rows, cols);
-        }
-        if(inputEl)inputEl.value='';
-      }catch(err){alert('Error al leer: '+err.message);console.error(err);}
-    };
-    if(f.name.toLowerCase().endsWith('.csv'))reader.readAsText(f,'UTF-8');
-    else reader.readAsArrayBuffer(f);
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// LISTA R25 — motor completo (espejo de LISTA OM)
+// ═══════════════════════════════════════════════════════════════════════════════
+(function(){
+  var R={
+    rows:[], filtered:[], called:{}, notes:{},
+    page:1, sz:50, sc:-1, sd:1, loaded:false, BATCH:500
   };
 
-  // ── GUARDAR R25 EN SUPABASE (batches) ───────────────────────────────────────
-  function listaR25Guardar(rows, cols){
-    setBadge('r25','Borrando datos anteriores...');
-    db.from('lista_r25').delete().neq('id',0).then(function(res){
-      if(res.error){alert('Error al limpiar: '+res.error.message);return;}
-      var total=rows.length, sent=0, batch=[];
-      for(var i=0;i<rows.length;i++){
-        batch.push({fila_num:i+1, datos:rows[i]});
-        if(batch.length===R25_BATCH || i===rows.length-1){
-          (function(b, offset){
-            db.from('lista_r25').insert(b).then(function(r){
-              if(r.error){console.error('Batch error',r.error);}
-              sent+=b.length;
-              setBadge('r25','Guardando... '+sent.toLocaleString()+'/'+total.toLocaleString());
-              if(sent>=total){
-                STATE.r25.loaded=true;
-                listaActivar('r25', rows, cols);
-                setBadge('r25', rows.length.toLocaleString()+' registros');
-                if(window.toast)toast('Lista R25 guardada en Supabase','ok');
-              }
-            });
-          })(batch.slice(), i);
-          batch=[];
-        }
-      }
-    });
+  // ── HELPERS ─────────────────────────────────────────────────────────────────
+  function g(id){return document.getElementById(id);}
+  function esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function col(r,k){var u=k.toUpperCase();return r[u]||r[k.toLowerCase()]||'';}
+
+  function r25IvaBadge(v){
+    if(!v)return '<span class="badge b-otro">—</span>';
+    var u=v.toUpperCase();
+    if(u.indexOf('RESPONSABLE INS')>=0)return '<span class="badge b-salon">R.INSCR.</span>';
+    if(u.indexOf('EXENTO')>=0)        return '<span class="badge b-obras">EXENTO</span>';
+    if(u.indexOf('MONOTRIB')>=0)      return '<span class="badge b-cta">MONO</span>';
+    if(u.indexOf('GRAN')>=0)          return '<span class="badge b-incob">GRAN CONT.</span>';
+    if(u.indexOf('NO RESP')>=0)       return '<span class="badge b-otro">NO RESP.</span>';
+    if(u.indexOf('CONSUMIDOR')>=0)    return '<span class="badge b-otro">CONS.FINAL</span>';
+    return '<span class="badge b-otro">'+esc(v.slice(0,10))+'</span>';
   }
 
-  // ── CARGAR R25 DESDE SUPABASE ────────────────────────────────────────────────
-  window.listaR25Cargar=function(){
-    if(STATE.r25.loaded && STATE.r25.rows.length>0) return; // ya en memoria
-    setBadge('r25','Cargando desde Supabase...');
-    document.getElementById('listar25-upload').style.display='none';
-    document.getElementById('listar25-data').style.display='block';
-    // Cargar en chunks de 1000 (Supabase max por defecto)
-    var allRows=[];
-    function fetchChunk(from){
-      db.from('lista_r25').select('fila_num,datos').order('fila_num').range(from, from+999)
+  // ── CARGA DESDE SUPABASE ─────────────────────────────────────────────────────
+  window.r25Init=function(){
+    if(R.loaded && R.rows.length>0){r25Apply();return;}
+    g('r25-loading').style.display='block';
+    g('r25-empty').style.display='none';
+    var all=[];
+    function fetch(from){
+      db.from('lista_r25').select('fila_num,datos').order('fila_num').range(from,from+999)
         .then(function(res){
-          if(res.error){
-            setBadge('r25','Error al cargar');
-            document.getElementById('listar25-upload').style.display='';
-            document.getElementById('listar25-data').style.display='none';
-            console.error(res.error);return;
-          }
-          allRows=allRows.concat(res.data.map(function(r){return r.datos;}));
-          setBadge('r25',allRows.length.toLocaleString()+' cargados...');
-          if(res.data.length===1000){
-            fetchChunk(from+1000); // hay mas
-          } else {
-            if(allRows.length===0){
-              // No hay datos: mostrar upload
-              document.getElementById('listar25-upload').style.display='';
-              document.getElementById('listar25-data').style.display='none';
-              setBadge('r25','Sin datos');
-              return;
-            }
-            var cols=Object.keys(allRows[0]);
-            STATE.r25.loaded=true;
-            listaActivar('r25', allRows, cols);
+          if(res.error){showToast('Error cargando R25: '+res.error.message,'err');g('r25-loading').style.display='none';return;}
+          all=all.concat(res.data.map(function(r){return r.datos;}));
+          if(res.data.length===1000){fetch(from+1000);}
+          else{
+            R.rows=all;
+            if(all.length===0){g('r25-loading').style.display='none';g('r25-empty').style.display='block';return;}
+            r25PopFilters();
+            db.from('client_states').select('*').like('client_id','r25_%')
+              .then(function(sr){
+                (sr.data||[]).forEach(function(s){
+                  if(s.called) R.called[s.client_id]=true;
+                  if(s.note)   R.notes[s.client_id]=s.note;
+                });
+                R.loaded=true;
+                g('r25-loading').style.display='none';
+                r25Apply();
+              });
           }
         });
     }
-    fetchChunk(0);
+    fetch(0);
   };
 
-  // ── ACTIVAR VISTA DE LISTA ───────────────────────────────────────────────────
-  function listaActivar(id, rows, cols){
-    var st=STATE[id];
-    st.rows=rows;st.cols=cols;st.visibleCols=cols.slice(0,20);st.page=1;
-    var sel=document.getElementById('lista'+id+'-col-filter');
-    sel.innerHTML='<option value="">Todas las columnas</option>';
-    cols.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-    listaRenderColToggle(id);
-    listaFiltrar(id);
-    document.getElementById('lista'+id+'-upload').style.display='none';
-    document.getElementById('lista'+id+'-data').style.display='block';
-    document.getElementById('lista'+id+'-exp-btn').style.display='';
-    document.getElementById('lista'+id+'-del-btn').style.display='';
-    setBadge(id, rows.length.toLocaleString()+' registros');
-  }
-
-  function listaRenderColToggle(id){
-    var st=STATE[id];var color=id==='om'?'verde':'rojo';
-    var wrap=document.getElementById('lista'+id+'-col-toggle');wrap.innerHTML='';
-    st.cols.forEach(function(c){
-      var btn=document.createElement('button');
-      btn.className='lista-col-btn '+(st.visibleCols.indexOf(c)>=0?'on '+color:'');
-      btn.textContent=c;
-      (function(col,b){b.onclick=function(){
-        var i=st.visibleCols.indexOf(col);
-        if(i>=0){if(st.visibleCols.length<=1)return;st.visibleCols.splice(i,1);b.className='lista-col-btn';}
-        else{st.visibleCols.push(col);b.className='lista-col-btn on '+color;}
-        listaRenderTabla(id);
-      };})(c,btn);
-      wrap.appendChild(btn);
+  // ── FILTROS ──────────────────────────────────────────────────────────────────
+  function r25PopFilters(){
+    var provs={},ivas={};
+    R.rows.forEach(function(r){
+      var p=col(r,'PRONOM'); if(p) provs[p]=1;
+      var i=col(r,'IVANOM'); if(i) ivas[i]=1;
     });
+    var ps=Object.keys(provs).sort(),ia=Object.keys(ivas).sort();
+    var sp=g('r25-f-prov'); sp.innerHTML='<option value="">Todas</option>';
+    ps.forEach(function(p){var o=document.createElement('option');o.value=p;o.textContent=p;sp.appendChild(o);});
+    var si=g('r25-f-iva'); si.innerHTML='<option value="">Todas</option>';
+    ia.forEach(function(i){var o=document.createElement('option');o.value=i;o.textContent=i;si.appendChild(o);});
   }
 
-  window.listaFiltrar=function(id){
-    var st=STATE[id];
-    var q=(document.getElementById('lista'+id+'-q').value||'').toLowerCase().trim();
-    var col=document.getElementById('lista'+id+'-col-filter').value;
-    if(!q){st.filtered=st.rows.slice();}
-    else if(col){st.filtered=st.rows.filter(function(r){return(r[col]||'').toString().toLowerCase().indexOf(q)>=0;});}
-    else{st.filtered=st.rows.filter(function(r){return Object.values(r).some(function(v){return(v||'').toString().toLowerCase().indexOf(q)>=0;});});}
-    st.page=1;listaRenderTabla(id);
-  };
-
-  function listaRenderTabla(id){
-    var st=STATE[id];var sz=ps(id);
-    var total=st.filtered.length;var tp=Math.max(1,Math.ceil(total/sz));
-    if(st.page>tp)st.page=tp;
-    var start=(st.page-1)*sz;var slice=st.filtered.slice(start,start+sz);
-    var color=id==='om'?'#4ade80':'#f87171';
-    document.getElementById('lista'+id+'-thead').innerHTML='<tr>'+st.visibleCols.map(function(c){return'<th>'+esc(c)+'</th>';}).join('')+'</tr>';
-    document.getElementById('lista'+id+'-tbody').innerHTML=slice.map(function(r){
-      return'<tr>'+st.visibleCols.map(function(c){var v=esc((r[c]||'').toString());return'<td title="'+v+'">'+v+'</td>';}).join('')+'</tr>';
-    }).join('');
-    document.getElementById('lista'+id+'-count').textContent=total.toLocaleString()+' resultados - pag. '+st.page+'/'+tp;
-    var pager=document.getElementById('lista'+id+'-pager');pager.innerHTML='';
-    function mkBtn(label,p,dis){var b=document.createElement('button');b.innerHTML=label;b.disabled=dis;b.onclick=function(){listaPaginar(id,p);};return b;}
-    pager.appendChild(mkBtn('&laquo;',1,st.page<=1));
-    pager.appendChild(mkBtn('&lsaquo;',st.page-1,st.page<=1));
-    var lo=Math.max(1,st.page-2),hi=Math.min(tp,st.page+2);
-    for(var p=lo;p<=hi;p++){
-      var b2=mkBtn(p,p,p===st.page);
-      if(p===st.page)b2.style.cssText='background:'+color+';color:#000;border-color:'+color+';font-weight:700';
-      pager.appendChild(b2);
-    }
-    pager.appendChild(mkBtn('&rsaquo;',st.page+1,st.page>=tp));
-    pager.appendChild(mkBtn('&raquo;',tp,st.page>=tp));
-    var info=document.createElement('span');info.style.marginLeft='8px';
-    info.textContent=(start+1)+'-'+Math.min(start+sz,total)+' de '+total.toLocaleString();
-    pager.appendChild(info);
-  }
-
-  window.listaPaginar=function(id,p){
-    var st=STATE[id];var sz=ps(id);var tp=Math.max(1,Math.ceil(st.filtered.length/sz));
-    st.page=Math.max(1,Math.min(p,tp));listaRenderTabla(id);
-  };
-
-  window.listaExportar=function(id){
-    var st=STATE[id];if(!st.rows.length)return;
-    var cols=st.visibleCols;
-    var csv=[cols.join(',')].concat(st.filtered.map(function(r){
-      return cols.map(function(c){return'"'+(r[c]||'').toString().replace(/"/g,'""')+'"';}).join(',');
-    })).join('\n');
-    var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
-    var a=document.createElement('a');a.href=URL.createObjectURL(blob);
-    a.download='lista_'+(id==='om'?'OM':'R25')+'_export.csv';a.click();
-  };
-
-  window.listaBorrar=function(id){
-    if(!confirm('Eliminar la lista cargada?'))return;
-    if(id==='r25'){
-      setBadge('r25','Eliminando...');
-      db.from('lista_r25').delete().neq('id',0).then(function(res){
-        if(res.error){alert('Error: '+res.error.message);return;}
-        STATE.r25.loaded=false;
-        listaReset('r25');
-        if(window.toast)toast('Lista R25 eliminada','ok');
+  window.r25Apply=function(){
+    var q=(g('r25-search').value||'').toLowerCase().trim();
+    var fiva=g('r25-f-iva').value, fprov=g('r25-f-prov').value;
+    var ftel=g('r25-f-tel').value, fpend=g('r25-f-pend').checked;
+    R.filtered=R.rows.filter(function(r){
+      var id='r25_'+col(r,'NUMERO');
+      if(fpend&&R.called[id]) return false;
+      if(fiva&&col(r,'IVANOM')!==fiva) return false;
+      if(fprov&&col(r,'PRONOM')!==fprov) return false;
+      var tel=col(r,'TELEFONO').trim();
+      if(ftel==='con'&&!tel) return false;
+      if(ftel==='sin'&&tel) return false;
+      if(q){
+        var hay=[col(r,'NOMBRE'),col(r,'CUIT'),col(r,'DIRECCION'),col(r,'LOCALIDAD'),col(r,'CONTACTO')].join(' ').toLowerCase();
+        if(hay.indexOf(q)<0) return false;
+      }
+      return true;
+    });
+    if(R.sc>=0){
+      var SCOLS=['NUMERO','NOMBRE','IVANOM','','','LOCALIDAD','PRONOM'];
+      var sk=SCOLS[R.sc];
+      if(sk) R.filtered.sort(function(a,b){
+        var av=col(a,sk).toLowerCase(), bv=col(b,sk).toLowerCase();
+        return av<bv?-R.sd:av>bv?R.sd:0;
       });
-    } else {
-      listaReset(id);
     }
+    R.page=1; r25Render();
   };
 
-  function listaReset(id){
-    var st=STATE[id];st.rows=[];st.filtered=[];st.cols=[];st.visibleCols=[];st.page=1;
-    document.getElementById('lista'+id+'-upload').style.display='';
-    document.getElementById('lista'+id+'-data').style.display='none';
-    document.getElementById('lista'+id+'-exp-btn').style.display='none';
-    document.getElementById('lista'+id+'-del-btn').style.display='none';
-    setBadge(id,'Sin datos');
-    document.getElementById('lista'+id+'-thead').innerHTML='';
-    document.getElementById('lista'+id+'-tbody').innerHTML='';
-    document.getElementById('lista'+id+'-q').value='';
-    document.getElementById('lista'+id+'-col-toggle').innerHTML='';
-    document.getElementById('lista'+id+'-count').textContent='';
+  window.r25ResetFilters=function(){
+    g('r25-search').value='';
+    g('r25-f-iva').value='';g('r25-f-prov').value='';
+    g('r25-f-tel').value='';g('r25-f-pend').checked=false;
+    r25Apply();
+  };
+
+  window.r25Sort=function(c){
+    if(R.sc===c) R.sd*=-1; else{R.sc=c;R.sd=1;}
+    [0,1,2,5,6].forEach(function(i){var s=g('r25-s'+i);if(s)s.textContent='';});
+    var s=g('r25-s'+c); if(s) s.textContent=R.sd===1?'↑':'↓';
+    r25Apply();
+  };
+
+  window.r25Paginate=function(p){
+    var tp=Math.max(1,Math.ceil(R.filtered.length/R.sz));
+    R.page=Math.max(1,Math.min(p,tp)); r25Render();
+  };
+
+  // ── RENDER ───────────────────────────────────────────────────────────────────
+  function r25Render(){
+    var tot=R.filtered.length, tp=Math.max(1,Math.ceil(tot/R.sz));
+    if(R.page>tp) R.page=tp;
+    var st=(R.page-1)*R.sz, sl=R.filtered.slice(st,st+R.sz);
+    g('r25-shr').textContent=tot===0?'0':(st+1)+'-'+Math.min(st+R.sz,tot);
+    g('r25-sht').textContent=tot.toLocaleString();
+    g('r25-empty').style.display=tot===0?'block':'none';
+
+    g('r25-tbody').innerHTML=sl.map(function(r){
+      var num=col(r,'NUMERO'), id='r25_'+num;
+      var nom=col(r,'NOMBRE')||'—', cuit=col(r,'CUIT'), iva=col(r,'IVANOM');
+      var tel=col(r,'TELEFONO').trim(), email=col(r,'EMAIL').trim();
+      var loc=col(r,'LOCALIDAD')||'—', prov=col(r,'PRONOM')||'—';
+      var contacto=col(r,'CONTACTO');
+      var isCalled=!!R.called[id], note=R.notes[id]||'';
+
+      // Teléfono
+      var telHtml='<span class="no-d">—</span>';
+      if(tel){
+        var dig=tel.replace(/\D/g,''), wa=dig.startsWith('54')?dig:'54'+dig;
+        telHtml='<div class="ag">'+
+          '<a class="ib ib-w" href="https://wa.me/'+wa+'" target="_blank">&#128172;</a>'+
+          '<a class="ib ib-m" href="tel:'+esc(tel)+'">&#128222;</a>'+
+          '<span style="font-size:11px;font-family:var(--mo)">'+esc(tel)+'</span></div>';
+      }
+
+      // Email
+      var emailHtml='<span class="no-d">—</span>';
+      if(email){
+        var gm='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(email);
+        emailHtml='<div class="ag">'+
+          '<a class="ib ib-m" href="'+gm+'" target="_blank">&#9993;</a>'+
+          '<span style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle">'+esc(email)+'</span></div>';
+      }
+
+      // Nota inline
+      var escId=esc(id);
+      var noteHtml='<span class="nd'+(note?'':' emp')+'" onclick="r25EditNote(\''+escId+'\',this)" title="'+(note?esc(note):'Agregar nota')+'">'+
+        (note?esc(note):'+ nota...')+'</span>';
+
+      // LLAMAR btn
+      var callBtn='<button class="cbtn '+(isCalled?'done':'pend')+'" onclick="r25ToggleCalled(\''+escId+'\',this)">'+
+        (isCalled?'&#10003; LLAMADO':'&#128222; LLAMAR')+'</button>';
+
+      return '<tr'+(isCalled?' class="called"':'')+' id="r25r-'+escId+'">'+
+        '<td style="color:var(--tx3);font-family:var(--mo);font-size:10px">'+esc(String(num))+'</td>'+
+        '<td title="'+esc(nom)+(cuit?' — '+esc(cuit):'')+'" style="font-weight:600">'+esc(nom)+
+          (contacto?'<br><span style="font-size:10px;color:var(--tx3);font-weight:400">'+esc(contacto)+'</span>':'')+
+        '</td>'+
+        '<td>'+r25IvaBadge(iva)+'</td>'+
+        '<td>'+telHtml+'</td>'+
+        '<td>'+emailHtml+'</td>'+
+        '<td title="'+esc(loc)+'">'+esc(loc)+'</td>'+
+        '<td title="'+esc(prov)+'">'+esc(prov)+'</td>'+
+        '<td>'+noteHtml+'</td>'+
+        '<td><div class="ag">'+callBtn+'</div></td>'+
+        '</tr>';
+    }).join('');
+
+    // Paginación (idéntica a LISTA OM)
+    var pager=g('r25-pgn'); pager.innerHTML='';
+    function mkB(lbl,p,dis){
+      var b=document.createElement('button');
+      b.className='pb'+(p===R.page?' on':'');
+      b.innerHTML=lbl; b.disabled=dis;
+      b.onclick=function(){r25Paginate(p);}; return b;
+    }
+    pager.appendChild(mkB('&laquo;',1,R.page<=1));
+    pager.appendChild(mkB('&lsaquo;',R.page-1,R.page<=1));
+    var lo=Math.max(1,R.page-2),hi=Math.min(tp,R.page+2);
+    for(var p=lo;p<=hi;p++) pager.appendChild(mkB(p,p,false));
+    pager.appendChild(mkB('&rsaquo;',R.page+1,R.page>=tp));
+    pager.appendChild(mkB('&raquo;',tp,R.page>=tp));
   }
+
+  // ── LLAMAR / NOTAS ────────────────────────────────────────────────────────────
+  window.r25ToggleCalled=function(id,btn){
+    R.called[id]=!R.called[id];
+    var c=R.called[id];
+    btn.className='cbtn '+(c?'done':'pend');
+    btn.innerHTML=c?'&#10003; LLAMADO':'&#128222; LLAMAR';
+    var row=g('r25r-'+id); if(row){if(c)row.classList.add('called');else row.classList.remove('called');}
+    db.from('client_states').upsert({
+      client_id:id,called:c,note:R.notes[id]||'',
+      updated_by:currentUser?currentUser.display_name||currentUser.username:'',
+      updated_at:new Date().toISOString()
+    },{onConflict:'client_id'}).then(function(r){if(r.error)showToast('Error guardando','err');});
+  };
+
+  window.r25EditNote=function(id,el){
+    var cur=R.notes[id]||'';
+    var escId=esc(id);
+    el.innerHTML='<textarea class="ni" rows="2" onblur="r25SaveNote(\''+escId+'\',this.value,this.parentNode)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}">'+esc(cur)+'</textarea>';
+    el.querySelector('textarea').focus();
+  };
+
+  window.r25SaveNote=function(id,val,el){
+    val=(val||'').trim(); R.notes[id]=val;
+    el.className='nd'+(val?'':' emp');
+    el.textContent=val||'+ nota...';
+    el.setAttribute('onclick','r25EditNote(\''+id+'\',this)');
+    el.setAttribute('title',val||'Agregar nota');
+    db.from('client_states').upsert({
+      client_id:id,called:!!R.called[id],note:val,
+      updated_by:currentUser?currentUser.display_name||currentUser.username:'',
+      updated_at:new Date().toISOString()
+    },{onConflict:'client_id'}).then(function(r){if(r.error)showToast('Error guardando nota','err');});
+  };
+
+  // ── EXPORT CSV ───────────────────────────────────────────────────────────────
+  window.r25Export=function(){
+    if(!R.filtered.length)return;
+    var cols=['NUMERO','NOMBRE','IVANOM','CUIT','TELEFONO','EMAIL','LOCALIDAD','PRONOM','CONTACTO'];
+    var csv=[cols.join(',')].concat(R.filtered.map(function(r){
+      return cols.map(function(c){return'"'+(col(r,c)||'').replace(/"/g,'""')+'"';}).join(',');
+    })).join('\n');
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+    a.download='lista_R25_export.csv'; a.click();
+  };
+
+  // ── IMPORTAR EXCEL (desde modal) ─────────────────────────────────────────────
+  window.r25ImportFile=function(file){
+    if(!file) return;
+    g('r25-imp-zone').style.display='none';
+    g('r25-imp-prog').style.display='block';
+    g('r25-imp-msg').textContent='Leyendo archivo…';
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var rows;
+        if(file.name.toLowerCase().endsWith('.csv')){
+          var lines=e.target.result.split(/\r?\n/).filter(function(l){return l.trim();});
+          var hdr=lines[0].split(/[,;|\t]/).map(function(c){return c.replace(/^"|"$/g,'').trim();});
+          rows=[];
+          for(var i=1;i<lines.length;i++){
+            var vals=lines[i].split(/[,;|\t]/).map(function(v){return v.replace(/^"|"$/g,'').trim();});
+            var row={};hdr.forEach(function(h,j){row[h]=vals[j]||'';});rows.push(row);
+          }
+        }else{
+          var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',sheetRows:0});
+          rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+          if(!rows.length){showToast('La hoja está vacía','err');r25ImpReset();return;}
+        }
+        g('r25-imp-msg').textContent='Guardando en Supabase… 0/'+rows.length.toLocaleString();
+        db.from('lista_r25').delete().neq('id',0).then(function(del){
+          if(del.error){showToast('Error limpiando: '+del.error.message,'err');r25ImpReset();return;}
+          var total=rows.length,sent=0,batch=[],BATCH=R.BATCH;
+          for(var i=0;i<rows.length;i++){
+            batch.push({fila_num:i+1,datos:rows[i]});
+            if(batch.length===BATCH||i===rows.length-1){
+              (function(b){
+                db.from('lista_r25').insert(b).then(function(ins){
+                  if(ins.error){showToast('Error batch: '+ins.error.message,'err');return;}
+                  sent+=b.length;
+                  g('r25-imp-msg').textContent='Guardando… '+sent.toLocaleString()+'/'+total.toLocaleString();
+                  if(sent>=total){
+                    R.rows=rows; R.loaded=true; R.called={}; R.notes={};
+                    r25PopFilters(); r25Apply();
+                    closeModal('r25-import-ov'); r25ImpReset();
+                    showToast('Lista R25 importada: '+total.toLocaleString()+' registros ✓','ok');
+                  }
+                });
+              })(batch.slice());
+              batch=[];
+            }
+          }
+        });
+      }catch(err){showToast('Error al leer: '+err.message,'err');r25ImpReset();}
+    };
+    if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file,'UTF-8');
+    else reader.readAsArrayBuffer(file);
+  };
+
+  function r25ImpReset(){
+    g('r25-imp-zone').style.display='';
+    g('r25-imp-prog').style.display='none';
+    g('r25-imp-msg').textContent='Procesando…';
+  }
+
 })();
 </script>
 </body>
