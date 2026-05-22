@@ -1317,7 +1317,7 @@ function render(){
       ?`<a style="color:var(--gr);text-decoration:none;font-family:var(--mo);font-size:11px;vertical-align:middle" href="tel:${r[3]}">${r[3]}</a>`
       :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('tel','${id}')">+ tel.</span>`;
     const editTelBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('tel','${id}')" title="Editar teléfono">✏</button>`;
-    const wB=tr?`<a class="ib ib-w" href="${buildWspUrl(r[1],r[3],r[1])}" target="_blank" title="WhatsApp" onclick="logAction({client_id:'${id}',action:'wsp',client_name:'${r[1].replace(/'/g,"\\'")}' })">💬</a>`:'';
+    const wB=tr?`<a class="ib ib-w" href="#" target="_blank" title="WhatsApp" onclick="event.preventDefault();logAction({client_id:'${id}',action:'wsp',client_name:'${r[1].replace(/'/g,"\\'")}' });window.open(buildWspUrl('${r[1].replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${r[3].replace(/'/g,"\\'")}','${r[1].replace(/'/g,"\\'").replace(/"/g,'&quot;')}'),'_blank')">💬</a>`:'';
     const mB=r[4]?`<button class="ib ib-m" onclick="openGmailBtn(this)" data-name="${r[1].replace(/"/g,'&quot;')}" data-email="${r[4].replace(/"/g,'&quot;')}" data-id="${id}" title="Abrir Gmail con template">✉</button>`:'';;
     const eD=r[4]
       ?`<a style="color:var(--bl);text-decoration:none;font-size:10px;vertical-align:middle;max-width:110px;overflow:hidden;text-overflow:ellipsis;display:inline-block" href="mailto:${r[4]}" title="${r[4]}">${r[4]}</a>`
@@ -3924,7 +3924,7 @@ async function deleteNewClient(id){
       if(tel){
         var dig=tel.replace(/\D/g,''), wa=dig.startsWith('54')?dig:'54'+dig;
         telHtml='<div class="ag">'+
-          '<a class="ib ib-w" href="https://web.whatsapp.com/send?phone='+wa+'&text='+encodeURIComponent((typeof wspTemplate!=="undefined"&&wspTemplate.body)||'Hola '+esc(nom))+'" target="_blank">&#128172;</a>'+
+          '<a class="ib ib-w" href="#" target="_blank" onclick="event.preventDefault();window.open(buildWspUrl(\''+esc(nom)+'\',\''+esc(tel)+'\',\''+esc(nom)+'\'),\'_blank\')" title="WhatsApp">&#128172;</a>'+
           '<a class="ib ib-m" href="tel:'+esc(tel)+'">&#128222;</a>'+
           '<span style="font-size:11px;font-family:var(--mo)">'+esc(tel)+'</span></div>';
       }
