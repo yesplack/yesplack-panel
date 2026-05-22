@@ -253,6 +253,9 @@ td:last-child{border-right:none}
 .log-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);border-radius:3px;padding:1px 5px;font-size:9px;font-family:var(--mo);color:#60a5fa;white-space:nowrap;cursor:pointer}
 .log-badge:hover{background:rgba(59,130,246,.25)}
 .cbtn.locked{background:rgba(34,197,94,.08);color:var(--tx3);border:1px solid rgba(34,197,94,.15);cursor:not-allowed}
+.spf-btn{background:transparent;border:none;color:var(--tx3);padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.spf-btn:hover{color:var(--tx);background:var(--sf3)}
+.spf-btn.spf-on{background:var(--ac);color:#000}
 
 @media(max-width:768px){
   .hdr{padding:6px 10px;gap:6px}
@@ -508,12 +511,20 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
 <!-- VIEW: STATS -->
 <div id="view-stats" class="view">
   <div id="stats-dashboard" style="padding:20px;max-width:1600px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Panel de actividad del equipo</div>
         <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">Performance del equipo</div>
       </div>
-      <div id="stats-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px">Cargando…</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:3px;background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:3px">
+          <button id="spf-week"  class="spf-btn spf-on" onclick="setStatsPeriod('week')" >Esta semana</button>
+          <button id="spf-month" class="spf-btn"        onclick="setStatsPeriod('month')">Este mes</button>
+          <button id="spf-prev"  class="spf-btn"        onclick="setStatsPeriod('prev')" >Mes anterior</button>
+          <button id="spf-all"   class="spf-btn"        onclick="setStatsPeriod('all')"  >Todo</button>
+        </div>
+        <div id="stats-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Cargando…</div>
+      </div>
     </div>
     <!-- KPI hero row -->
     <div id="stats-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px"></div>
@@ -1322,7 +1333,7 @@ function switchView(v,btn){
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   btn.classList.add('on');
-  if(v==='stats'){renderStats();}
+  if(v==='stats'){window._statsPeriod=window._statsPeriod||'week';renderStats();}
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -1330,43 +1341,133 @@ function switchView(v,btn){
   if(v==='listar25')r25Init();
 }
 
+// ── STATS PERIOD FILTER ──────────────────────────────────────────────────────
+window._statsPeriod = window._statsPeriod || 'week';
+
+function setStatsPeriod(p){
+  window._statsPeriod = p;
+  // Update button styles
+  ['week','month','prev','all'].forEach(k=>{
+    const btn=document.getElementById('spf-'+k);
+    if(btn) btn.className='spf-btn'+(p===k?' spf-on':'');
+  });
+  renderStats();
+}
+
+function _getPeriodBounds(p){
+  const now = new Date();
+  let from, to = new Date(now); // to = end of today
+  to.setHours(23,59,59,999);
+  if(p==='week'){
+    // Monday of current week
+    from = new Date(now);
+    const day = from.getDay(); // 0=Sun,1=Mon...
+    const diff = day===0 ? 6 : day-1; // days since Monday
+    from.setDate(from.getDate()-diff);
+    from.setHours(0,0,0,0);
+  } else if(p==='month'){
+    from = new Date(now.getFullYear(), now.getMonth(), 1, 0,0,0,0);
+  } else if(p==='prev'){
+    const y=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+    const m=now.getMonth()===0?11:now.getMonth()-1;
+    from = new Date(y, m, 1, 0,0,0,0);
+    to   = new Date(y, m+1, 0, 23,59,59,999);
+  } else {
+    // all — no filter
+    return null;
+  }
+  return {from, to};
+}
+
+function _filterByPeriod(rows, bounds, tsField){
+  if(!bounds) return rows;
+  return rows.filter(r=>{
+    const ts = r[tsField];
+    if(!ts) return false;
+    const d = new Date(ts);
+    return d >= bounds.from && d <= bounds.to;
+  });
+}
+
+function _periodLabel(p, bounds){
+  const loc = {day:'2-digit',month:'2-digit',year:'2-digit'};
+  if(!bounds) return 'Todo el tiempo';
+  if(p==='week') return 'Semana actual · desde ' + bounds.from.toLocaleDateString('es-AR',loc);
+  if(p==='month'){
+    const m = bounds.from.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    return 'Mes actual · ' + m.charAt(0).toUpperCase()+m.slice(1);
+  }
+  if(p==='prev'){
+    const m = bounds.from.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    return 'Mes anterior · ' + m.charAt(0).toUpperCase()+m.slice(1);
+  }
+  return '';
+}
+
 async function renderStats(){
   // ── Load data in parallel ──────────────────────────────────────────────────
-  const [clRes, ctRes] = await Promise.all([
+  const [clRes, ctRes, csRes] = await Promise.all([
     db.from('call_logs').select('client_id,resultado,operador,created_at').order('created_at',{ascending:false}).limit(10000),
-    db.from('contact_logs').select('id,client_id,lista,canal,resultado,operador,created_at').order('created_at',{ascending:false}).limit(10000)
+    db.from('contact_logs').select('id,client_id,lista,canal,resultado,operador,created_at').order('created_at',{ascending:false}).limit(10000),
+    db.from('client_states').select('client_id,note,updated_by,updated_at').not('note','is',null).neq('note','').order('updated_at',{ascending:false}).limit(10000)
   ]);
-  const callData  = clRes.data  || [];
-  const contData  = ctRes.data  || [];
+  // ── Apply period filter ──────────────────────────────────────────────────
+  const _period = window._statsPeriod || 'week';
+  const _bounds = _getPeriodBounds(_period);
+
+  const callData  = _filterByPeriod(clRes.data  || [], _bounds, 'created_at');
+  const contData  = _filterByPeriod(ctRes.data  || [], _bounds, 'created_at');
+  // notasData: client_states rows with a non-empty note — informal contacts
+  const notasRaw  = _filterByPeriod(csRes.data  || [], _bounds, 'updated_at');
+  const notasData = notasRaw.map(r=>({
+    client_id: r.client_id,
+    canal: 'nota',
+    operador: r.updated_by || '—',
+    created_at: r.updated_at,
+    obs: r.note || ''
+  }));
 
   // ── Aggregate totals ───────────────────────────────────────────────────────
-  const totalLlamados   = callData.length;
-  const totalWsp        = contData.filter(l=>l.canal==='wsp').length;
-  const totalMail       = contData.filter(l=>l.canal==='mail').length;
-  const totalReagendar  = contData.filter(l=>l.canal==='reagendar').length;
-  const totalAll        = totalLlamados + totalWsp + totalMail + totalReagendar;
+  // llamados = call_logs (OM) + contact_logs canal='llamado' (R25)
+  const contLlamados  = contData.filter(l=>l.canal==='llamado').length;
+  const totalLlamados = callData.length + contLlamados;
+  const totalWsp      = contData.filter(l=>l.canal==='wsp').length;
+  const totalMail     = contData.filter(l=>l.canal==='mail').length;
+  const totalReagendar= contData.filter(l=>l.canal==='reagendar').length;
+  const totalNotas    = notasData.length;
+  const totalAll      = totalLlamados + totalWsp + totalMail + totalReagendar + totalNotas;
 
-  // Date range
-  const allDates = [...callData,...contData].map(l=>l.created_at).filter(Boolean).sort();
-  const dateLabel = allDates.length
-    ? new Date(allDates[0]).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})
-      + ' → ' + new Date(allDates[allDates.length-1]).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit'})
-    : 'Sin datos';
-  document.getElementById('stats-period-badge').textContent = '📆 ' + dateLabel;
+  // Clientes únicos contactados (llamados + notas)
+  const uniqueClientsCalled = new Set([
+    ...callData.map(l=>l.client_id),
+    ...contData.filter(l=>l.canal==='llamado').map(l=>l.client_id),
+    ...notasData.map(l=>l.client_id)
+  ]).size;
+
+  // Period badge label
+  document.getElementById('stats-period-badge').textContent = '📆 ' + _periodLabel(_period, _bounds);
+  // Sync button state (in case renderStats is called directly on tab switch)
+  ['week','month','prev','all'].forEach(k=>{
+    const btn=document.getElementById('spf-'+k);
+    if(btn) btn.className='spf-btn'+(_period===k?' spf-on':'');
+  });
 
   // ── KPI HERO CARDS ─────────────────────────────────────────────────────────
   const kpis=[
-    {n:totalAll,   lbl:'Total interacciones', icon:'⚡', color:'var(--ac)',  glow:'rgba(255,214,0,.15)'},
-    {n:totalLlamados, lbl:'Llamados',         icon:'📞', color:'#4ade80',   glow:'rgba(74,222,128,.12)'},
-    {n:totalWsp,   lbl:'WhatsApp',            icon:'💬', color:'#25d366',   glow:'rgba(37,211,102,.12)'},
-    {n:totalMail,  lbl:'Emails',              icon:'✉️', color:'#60a5fa',   glow:'rgba(96,165,250,.12)'},
-    {n:totalReagendar,lbl:'Reagendados',      icon:'📅', color:'#c084fc',   glow:'rgba(192,132,252,.12)'},
+    {n:totalAll,      lbl:'Total interacciones', sub:'registradas en logs',                   icon:'⚡', color:'var(--ac)',  glow:'rgba(255,214,0,.15)'},
+    {n:totalLlamados, lbl:'Llamados',            sub:uniqueClientsCalled+' clientes únicos',  icon:'📞', color:'#4ade80',   glow:'rgba(74,222,128,.12)'},
+    {n:totalWsp,      lbl:'WhatsApp',            sub:'mensajes logueados',                    icon:'💬', color:'#25d366',   glow:'rgba(37,211,102,.12)'},
+    {n:totalMail,     lbl:'Emails',              sub:'mails logueados',                       icon:'✉️', color:'#60a5fa',   glow:'rgba(96,165,250,.12)'},
+    {n:totalReagendar,lbl:'Reagendados',         sub:'próximos contactos',                    icon:'📅', color:'#c084fc',   glow:'rgba(192,132,252,.12)'},
+    {n:totalNotas,    lbl:'Notas',               sub:'contactos informales (campo nota)',      icon:'📝', color:'#fb923c',   glow:'rgba(251,146,60,.12)'},
   ];
+  const borderFor=c=>c.replace('var(--ac)','rgba(255,214,0,.35)').replace('#4ade80','rgba(74,222,128,.25)').replace('#25d366','rgba(37,211,102,.25)').replace('#60a5fa','rgba(96,165,250,.25)').replace('#c084fc','rgba(192,132,252,.25)');
   document.getElementById('stats-kpis').innerHTML=kpis.map(k=>`
-    <div style="background:${k.glow};border:1px solid ${k.color.replace('var(--ac)','rgba(255,214,0,.35)').replace('#4ade80','rgba(74,222,128,.25)').replace('#25d366','rgba(37,211,102,.25)').replace('#60a5fa','rgba(96,165,250,.25)').replace('#c084fc','rgba(192,132,252,.25)')};border-radius:13px;padding:20px 18px;position:relative;overflow:hidden">
+    <div style="background:${k.glow};border:1px solid ${borderFor(k.color)};border-radius:13px;padding:20px 18px;position:relative;overflow:hidden">
       <div style="font-size:28px;margin-bottom:10px">${k.icon}</div>
       <div style="font-size:34px;font-weight:900;font-family:var(--mo);color:${k.color};line-height:1;letter-spacing:-1px">${k.n.toLocaleString('es')}</div>
-      <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:6px">${k.lbl}</div>
+      <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-top:5px">${k.lbl}</div>
+      <div style="font-size:9px;color:var(--tx3);margin-top:2px;opacity:.7">${k.sub}</div>
       <div style="position:absolute;bottom:-14px;right:-8px;font-size:64px;opacity:.06;line-height:1">${k.icon}</div>
     </div>`).join('');
 
@@ -1376,6 +1477,7 @@ async function renderStats(){
     {lbl:'WhatsApp',   n:totalWsp,      color:'#25d366'},
     {lbl:'Email',      n:totalMail,     color:'#60a5fa'},
     {lbl:'Reagendar',  n:totalReagendar,color:'#c084fc'},
+    {lbl:'Notas',      n:totalNotas,    color:'#fb923c'},
   ].filter(d=>d.n>0);
 
   let donutSvg='';
@@ -1420,11 +1522,22 @@ async function renderStats(){
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
   const byUser={};
-  const addToUser=(u,field)=>{if(!u)u='—';if(!byUser[u])byUser[u]={llamados:0,wsp:0,mail:0,reagendar:0,lastAt:null};byUser[u][field]++;};
-  callData.forEach(l=>{addToUser(l.operador,'llamados');if(l.created_at&&(!byUser[l.operador]?.lastAt||l.created_at>byUser[l.operador].lastAt))byUser[l.operador||'—'].lastAt=l.created_at;});
-  contData.forEach(l=>{addToUser(l.operador,l.canal==='wsp'?'wsp':l.canal==='mail'?'mail':l.canal==='reagendar'?'reagendar':'llamados');if(l.created_at&&byUser[l.operador||'—']&&(!byUser[l.operador||'—'].lastAt||l.created_at>byUser[l.operador||'—'].lastAt))byUser[l.operador||'—'].lastAt=l.created_at;});
+  const addToUser=(u,field,ts)=>{
+    if(!u)u='—';
+    if(!byUser[u])byUser[u]={llamados:0,wsp:0,mail:0,reagendar:0,notas:0,lastAt:null};
+    byUser[u][field]++;
+    if(ts&&(!byUser[u].lastAt||ts>byUser[u].lastAt))byUser[u].lastAt=ts;
+  };
+  callData.forEach(l=>addToUser(l.operador,'llamados',l.created_at));
+  contData.forEach(l=>{
+    const f=l.canal==='wsp'?'wsp':l.canal==='mail'?'mail':l.canal==='reagendar'?'reagendar':l.canal==='llamado'?'llamados':null;
+    if(f) addToUser(l.operador,f,l.created_at);
+  });
+  notasData.forEach(l=>addToUser(l.operador,'notas',l.created_at));
 
-  const ranked=Object.entries(byUser).map(([name,d])=>({name,total:d.llamados+d.wsp+d.mail+d.reagendar,...d})).sort((a,b)=>b.total-a.total);
+  const ranked=Object.entries(byUser).map(([name,d])=>({name,total:d.llamados+d.wsp+d.mail+d.reagendar+d.notas,...d})).sort((a,b)=>b.total-a.total);
+  // Cache filtered data for openUserDetail
+  window._statsCache={callData,contData,notasData,ranked,_period,_bounds};
   const maxTotal=ranked[0]?.total||1;
   const medals=['🥇','🥈','🥉'];
 
@@ -1436,7 +1549,7 @@ async function renderStats(){
       const barPct=Math.round(u.total/maxTotal*100);
       const avatarColor=i===0?'var(--ac)':i===1?'#94a3b8':i===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][i%5];
       const lastTs=u.lastAt?new Date(u.lastAt).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'—';
-      return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,48,72,.5)">
+      return`<div onclick="openUserDetail('${u.name.replace(/'/g,"&#39;")}')" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(42,48,72,.5);cursor:pointer;transition:background .15s;border-radius:6px;margin:0 -6px;padding-left:6px;padding-right:6px" onmouseover="this.style.background='var(--sf2)'" onmouseout="this.style.background='transparent'">
         <div style="font-size:18px;min-width:28px;text-align:center">${medals[i]||'<span style="font-family:var(--mo);color:var(--tx3);font-size:11px">'+(i+1)+'</span>'}</div>
         <div style="width:36px;height:36px;border-radius:50%;background:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0">${initials}</div>
         <div style="flex:1;min-width:0">
@@ -1451,6 +1564,7 @@ async function renderStats(){
             <span style="color:#4ade80">📞${u.llamados}</span>
             <span style="color:#25d366">💬${u.wsp}</span>
             <span style="color:#60a5fa">✉${u.mail}</span>
+            <span style="color:#fb923c">📝${u.notas}</span>
             <span style="color:var(--tx3)">última: ${lastTs}</span>
           </div>
         </div>
@@ -1474,7 +1588,7 @@ async function renderStats(){
     const avatarColor=i===0?'var(--ac)':i===1?'#94a3b8':i===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][i%5];
     const topRes=Object.entries(byUserRes[u.name]||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
     const lastTs=u.lastAt?new Date(u.lastAt).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'Sin actividad';
-    return`<div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:border-color .2s" onmouseover="this.style.borderColor='${avatarColor}'" onmouseout="this.style.borderColor='var(--bd)'">
+    return`<div onclick="openUserDetail('${u.name.replace(/'/g,"&#39;")}')" style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;position:relative;overflow:hidden;transition:all .2s;cursor:pointer" onmouseover="this.style.borderColor='${avatarColor}';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--bd)';this.style.transform='none'">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${avatarColor};border-radius:12px 12px 0 0"></div>
       <!-- Header -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
@@ -1486,12 +1600,13 @@ async function renderStats(){
         ${i<3?`<div style="margin-left:auto;font-size:22px">${medals[i]}</div>`:''}
       </div>
       <!-- KPI numbers -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
         ${[
           {v:u.total,    lbl:'Total',   c:avatarColor},
           {v:u.llamados, lbl:'Llamados',c:'#4ade80'},
           {v:u.wsp,      lbl:'WSP',     c:'#25d366'},
           {v:u.mail,     lbl:'Mail',    c:'#60a5fa'},
+          {v:u.notas,    lbl:'Notas',   c:'#fb923c'},
         ].map(k=>`<div style="background:var(--sf2);border-radius:8px;padding:8px 6px;text-align:center">
           <div style="font-size:20px;font-weight:900;font-family:var(--mo);color:${k.c};line-height:1">${k.v}</div>
           <div style="font-size:8px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;margin-top:3px;letter-spacing:.5px">${k.lbl}</div>
@@ -3585,5 +3700,218 @@ async function deleteNewClient(id){
 
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     USER DETAIL MODAL
+════════════════════════════════════════════════════════════════════════ -->
+<div id="user-detail-ov" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:800;overflow-y:auto;padding:20px" onclick="if(event.target===this)closeUserDetail()">
+  <div id="user-detail-box" style="background:var(--sf);border:1px solid var(--bd);border-radius:16px;max-width:860px;margin:0 auto;overflow:hidden;position:relative">
+    <!-- Header band -->
+    <div id="udh-band" style="height:5px;width:100%"></div>
+    <div style="padding:22px 24px">
+      <!-- Top row -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div id="udh-avatar" style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#000;flex-shrink:0;box-shadow:0 0 0 4px rgba(0,0,0,.3)"></div>
+        <div style="flex:1">
+          <div id="udh-name" style="font-size:17px;font-weight:900;letter-spacing:-.3px"></div>
+          <div id="udh-sub"  style="font-size:10px;font-family:var(--mo);color:var(--tx3);margin-top:2px"></div>
+        </div>
+        <div id="udh-medal" style="font-size:30px"></div>
+        <button onclick="closeUserDetail()" style="background:var(--sf2);border:1px solid var(--bd);color:var(--tx2);border-radius:7px;padding:6px 10px;font-size:12px;cursor:pointer">✕</button>
+      </div>
+
+      <!-- KPI strip -->
+      <div id="udh-kpis" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:20px"></div>
+
+      <!-- Activity bar chart -->
+      <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:16px">
+        <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Actividad diaria</div>
+        <div id="udh-chart" style="display:flex;align-items:flex-end;gap:3px;height:70px;overflow-x:auto"></div>
+        <div id="udh-chart-labels" style="display:flex;gap:3px;margin-top:5px;overflow-x:hidden"></div>
+      </div>
+
+      <!-- Results + Timeline side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <!-- Results breakdown -->
+        <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:16px">
+          <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Resultados</div>
+          <div id="udh-results" style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto"></div>
+        </div>
+        <!-- Recent activity timeline -->
+        <div style="background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:16px">
+          <div style="font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Últimos registros</div>
+          <div id="udh-timeline" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function closeUserDetail(){
+  document.getElementById('user-detail-ov').style.display='none';
+}
+
+function openUserDetail(name){
+  const cache=window._statsCache;
+  if(!cache){showToast('Cargá el panel de Stats primero','err');return;}
+
+  const {callData,contData,notasData,ranked,_period,_bounds}=cache;
+  const medals=['🥇','🥈','🥉'];
+  const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
+    'Contactado — volver a llamar':'#3b82f6','Contactado — no interesado':'#94a3b8',
+    'No atiende':'#f97316','Número incorrecto':'#ef4444','Buzón de voz':'#a855f7',
+    'Respondió — interesado':'#22c55e','Respondió — no interesado':'#94a3b8',
+    'Respondió — solicita presupuesto':'#FFD600','Respondió — volver a contactar':'#3b82f6',
+    'Mensaje enviado — sin respuesta':'#60a5fa','Email enviado — sin respuesta':'#60a5fa',
+  };
+
+  const ri=ranked.findIndex(u=>u.name===name);
+  const u=ranked[ri];
+  if(!u)return;
+
+  const avatarColor=ri===0?'var(--ac)':ri===1?'#94a3b8':ri===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][ri%5];
+  const initials=name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+  const lastTs=u.lastAt?new Date(u.lastAt).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+
+  // Header
+  document.getElementById('udh-band').style.background=avatarColor;
+  const av=document.getElementById('udh-avatar');
+  av.style.background=avatarColor; av.textContent=initials;
+  document.getElementById('udh-name').textContent=name;
+  document.getElementById('udh-sub').textContent='Última actividad: '+lastTs;
+  document.getElementById('udh-medal').textContent=medals[ri]||'';
+
+  // KPIs
+  const kd=[
+    {v:u.total,    lbl:'Total',   c:avatarColor},
+    {v:u.llamados, lbl:'Llamados',c:'#4ade80'},
+    {v:u.wsp,      lbl:'WSP',     c:'#25d366'},
+    {v:u.mail,     lbl:'Mail',    c:'#60a5fa'},
+    {v:u.notas,    lbl:'Notas',   c:'#fb923c'},
+  ];
+  document.getElementById('udh-kpis').innerHTML=kd.map(k=>`
+    <div style="background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:10px 8px;text-align:center">
+      <div style="font-size:24px;font-weight:900;font-family:var(--mo);color:${k.c};line-height:1">${k.v}</div>
+      <div style="font-size:8px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;margin-top:4px;letter-spacing:.5px">${k.lbl}</div>
+    </div>`).join('');
+
+  // Build all user logs: call_logs + contact_logs + notes
+  const userCalls = callData.filter(l=>(l.operador||'—')===name);
+  const userCont  = contData.filter(l=>(l.operador||'—')===name);
+  const userNotas = notasData.filter(l=>(l.operador||'—')===name);
+
+  // ── Activity-by-day bar chart ─────────────────────────────────────────────
+  // Determine day buckets based on period
+  function dayKey(ts){ const d=new Date(ts); return d.toISOString().slice(0,10); }
+  const dayCounts={};
+  const allEntries=[
+    ...userCalls.map(l=>({ts:l.created_at,canal:'llamado'})),
+    ...userCont.map(l=>({ts:l.created_at,canal:l.canal})),
+    ...userNotas.map(l=>({ts:l.created_at,canal:'nota'})),
+  ].filter(e=>e.ts);
+
+  allEntries.forEach(e=>{
+    const k=dayKey(e.ts);
+    if(!dayCounts[k])dayCounts[k]=0;
+    dayCounts[k]++;
+  });
+
+  // Build day list
+  const now=new Date();
+  let days=[];
+  if(_bounds){
+    let d=new Date(_bounds.from);
+    while(d<=_bounds.to && d<=now){
+      days.push(d.toISOString().slice(0,10));
+      d.setDate(d.getDate()+1);
+    }
+  } else {
+    // All: last 30 days
+    for(let i=29;i>=0;i--){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      days.push(d.toISOString().slice(0,10));
+    }
+  }
+
+  const maxDay=Math.max(1,...days.map(d=>dayCounts[d]||0));
+  const barW=Math.max(8,Math.min(32,Math.floor(800/Math.max(days.length,1))-4));
+
+  document.getElementById('udh-chart').innerHTML=days.map(d=>{
+    const v=dayCounts[d]||0;
+    const h=v?Math.max(4,Math.round(v/maxDay*60)):2;
+    const col=v?avatarColor:'var(--bd)';
+    const isToday=d===now.toISOString().slice(0,10);
+    return `<div title="${d}: ${v} acciones" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;width:${barW}px">
+      <div style="font-family:var(--mo);font-size:8px;color:${v?'var(--tx)':'transparent'};line-height:1">${v||''}</div>
+      <div style="width:100%;height:${h}px;background:${col};border-radius:3px 3px 0 0;transition:height .3s;${isToday?'outline:1px solid var(--ac)':''}"></div>
+    </div>`;
+  }).join('');
+
+  // Labels (show every Nth day to avoid crowding)
+  const step=days.length>14?Math.ceil(days.length/10):1;
+  document.getElementById('udh-chart-labels').innerHTML=days.map((d,i)=>{
+    const show=(i%step===0)||i===days.length-1;
+    const label=show?new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+    return `<div style="font-family:var(--mo);font-size:8px;color:var(--tx3);flex-shrink:0;width:${barW}px;text-align:center;overflow:hidden">${label}</div>`;
+  }).join('');
+
+  // ── Results breakdown ─────────────────────────────────────────────────────
+  const resCounts={};
+  userCalls.forEach(l=>{if(l.resultado){resCounts[l.resultado]=(resCounts[l.resultado]||0)+1;}});
+  userCont.forEach(l=>{if(l.resultado){resCounts[l.resultado]=(resCounts[l.resultado]||0)+1;}});
+  const resSorted=Object.entries(resCounts).sort((a,b)=>b[1]-a[1]);
+  const resTotal=resSorted.reduce((s,[,n])=>s+n,0)||1;
+
+  document.getElementById('udh-results').innerHTML=resSorted.length
+    ?resSorted.map(([res,cnt])=>`
+      <div style="display:flex;align-items:center;gap:7px">
+        <span style="width:8px;height:8px;border-radius:2px;background:${RCOLS[res]||'var(--tx3)'};flex-shrink:0"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+            <span style="font-size:10px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">${res}</span>
+            <span style="font-family:var(--mo);font-size:10px;color:var(--tx);font-weight:600;flex-shrink:0;margin-left:4px">${cnt}</span>
+          </div>
+          <div style="height:3px;background:var(--bd);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(cnt/resTotal*100)}%;background:${RCOLS[res]||'var(--tx3)'};border-radius:2px"></div>
+          </div>
+        </div>
+      </div>`)
+      .join('')
+    :'<div style="color:var(--tx3);font-size:11px">Sin resultados registrados</div>';
+
+  // ── Timeline ──────────────────────────────────────────────────────────────
+  const CANAL_LABEL={llamado:'📞 Llamado',wsp:'💬 WSP',mail:'✉️ Mail',reagendar:'📅 Reagendar',nota:'📝 Nota'};
+  const CANAL_COL  ={llamado:'#4ade80',wsp:'#25d366',mail:'#60a5fa',reagendar:'#c084fc',nota:'#fb923c'};
+  const timeline=[
+    ...userCalls.map(l=>({ts:l.created_at,canal:'llamado',resultado:l.resultado,obs:l.observaciones})),
+    ...userCont.map(l=>({ts:l.created_at,canal:l.canal,resultado:l.resultado,obs:l.observaciones})),
+    ...userNotas.map(l=>({ts:l.created_at,canal:'nota',resultado:'',obs:l.obs||''})),
+  ].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,60);
+
+  document.getElementById('udh-timeline').innerHTML=timeline.length
+    ?timeline.map(e=>{
+      const ts=e.ts?new Date(e.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+      const col=CANAL_COL[e.canal]||'var(--tx3)';
+      const lbl=CANAL_LABEL[e.canal]||e.canal;
+      return `<div style="display:flex;gap:8px;align-items:flex-start;padding-bottom:8px;border-bottom:1px solid rgba(42,48,72,.4)">
+        <div style="width:3px;border-radius:2px;background:${col};flex-shrink:0;margin-top:3px;align-self:stretch"></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px">
+            <span style="font-size:10px;font-weight:600;color:${col}">${lbl}</span>
+            <span style="font-family:var(--mo);font-size:9px;color:var(--tx3);flex-shrink:0">${ts}</span>
+          </div>
+          ${e.resultado?`<div style="font-size:10px;color:var(--tx2)">${e.resultado}</div>`:''}
+          ${e.obs?`<div style="font-size:9px;color:var(--tx3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.obs}</div>`:''}
+        </div>
+      </div>`;
+    }).join('')
+    :'<div style="color:var(--tx3);font-size:11px">Sin actividad en el período</div>';
+
+  document.getElementById('user-detail-ov').style.display='block';
+}
+</script>
+
 </body>
 </html>
