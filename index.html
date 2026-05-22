@@ -527,9 +527,12 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       <button class="tab adm" id="wsp-tab" style="display:none" onclick="switchView('wsp',this)">💬 WhatsApp</button>
       <button class="tab adm" id="newcli-tab" style="display:none" onclick="switchView('newcli',this)">+ Nuevo cliente</button>
     </div>
-    <div class="pill">Total: <span id="total-c">0</span></div>
-    <div class="pill" id="called-pill" onclick="openCallsReport()" style="cursor:pointer;border-color:rgba(34,197,94,.3);transition:all .2s" onmouseover="this.style.borderColor='var(--gr)'" onmouseout="this.style.borderColor='rgba(34,197,94,.3)'">Llamados: <span id="called-c">0</span></div>
-    <div class="pill"><div class="prog"><span id="pct-t">0%</span><div class="prog-bar"><div class="prog-fill" id="prog-f" style="width:0%"></div></div></div></div>
+
+    <span id="total-c" style="display:none"></span>
+    <span id="called-c" style="display:none"></span>
+    <span id="pct-t" style="display:none"></span>
+    <div id="prog-f" style="display:none"></div>
+    <div id="called-pill" style="display:none"></div>
     <div class="conn-pill"><div id="conn-dot"></div><span id="conn-txt">Conectando…</span></div>
     <div style="position:relative">
       <button class="user-btn" id="user-btn" onclick="toggleUserMenu()">👤 —</button>
