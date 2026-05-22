@@ -217,6 +217,24 @@ td:last-child{border-right:none}
 .utbl th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:var(--tx3);background:var(--sf2);border-bottom:1px solid var(--bd)}
 .utbl td{padding:9px 12px;font-size:12px;border-bottom:1px solid rgba(42,48,72,.5);vertical-align:middle}
 .utbl tr:last-child td{border-bottom:none}
+/* PERMS MODAL */
+.perm-section{background:var(--sf2);border:1px solid var(--bd);border-radius:9px;padding:14px 16px;margin-bottom:10px;transition:border-color .2s}
+.perm-section:last-child{margin-bottom:0}
+.perm-section-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.perm-section-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+.perm-section-title{font-size:12px;font-weight:600;color:var(--tx)}
+.perm-section-desc{font-size:10px;color:var(--tx3);font-family:var(--mo)}
+/* Toggle switch */
+.perm-toggle{position:relative;width:38px;height:22px;flex-shrink:0}
+.perm-toggle input{opacity:0;width:0;height:0;position:absolute}
+.perm-slider{position:absolute;inset:0;background:var(--bd);border-radius:22px;cursor:pointer;transition:background .2s}
+.perm-slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.perm-toggle input:checked+.perm-slider{background:var(--gr)}
+.perm-toggle input:checked+.perm-slider:before{transform:translateX(16px)}
+.perm-section.disabled-perm{opacity:.45}
+.perm-badge{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:700;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px;margin-left:6px}
+.perm-badge-on{background:rgba(34,197,94,.15);color:var(--gr);border:1px solid rgba(34,197,94,.3)}
+.perm-badge-off{background:rgba(239,68,68,.12);color:var(--rd);border:1px solid rgba(239,68,68,.25)}
 .utbl tbody tr:hover{background:var(--sf2)}
 .rb{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;font-weight:600;font-family:var(--mo);text-transform:uppercase}
 .rb-admin{background:rgba(168,85,247,.2);color:#d8b4fe;border:1px solid rgba(168,85,247,.35)}.rb-maestro{background:rgba(255,214,0,.2);color:#FFD600;border:1px solid rgba(255,214,0,.4)}
@@ -256,6 +274,64 @@ td:last-child{border-right:none}
 .spf-btn{background:transparent;border:none;color:var(--tx3);padding:5px 12px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;transition:all .2s;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
 .spf-btn:hover{color:var(--tx);background:var(--sf3)}
 .spf-btn.spf-on{background:var(--ac);color:#000}
+
+/* ── BUSCADOR ─────────────────────────────────────────────────────────── */
+.bsc-wrap{padding:24px 20px;max-width:1400px;margin:0 auto}
+.bsc-hero{text-align:center;padding:36px 20px 28px;position:relative;overflow:hidden}
+.bsc-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 0%,rgba(255,214,0,.07),transparent);pointer-events:none}
+.bsc-title{font-size:28px;font-weight:900;letter-spacing:-1px;margin-bottom:4px}
+.bsc-title span{color:var(--ac)}
+.bsc-sub{font-size:11px;font-family:var(--mo);color:var(--tx3);letter-spacing:1px;text-transform:uppercase}
+.bsc-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;max-width:920px;margin:0 auto 14px}
+.bsc-field{display:flex;flex-direction:column;gap:4px}
+.bsc-lbl{font-size:9px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;padding-left:2px}
+.bsc-inp{background:var(--sf);border:1.5px solid var(--bd);border-radius:8px;color:var(--tx);padding:9px 12px;font-size:13px;font-family:var(--sa);outline:none;transition:all .2s}
+.bsc-inp:focus{border-color:var(--ac);background:var(--sf2);box-shadow:0 0 0 3px rgba(255,214,0,.08)}
+.bsc-inp::placeholder{color:var(--tx3)}
+.bsc-row2{display:flex;align-items:center;justify-content:space-between;max-width:920px;margin:0 auto 24px;flex-wrap:wrap;gap:8px}
+.bsc-filters{display:flex;gap:6px;flex-wrap:wrap}
+.bsc-chip{background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 11px;font-size:10px;font-family:var(--mo);color:var(--tx3);cursor:pointer;transition:all .15s;white-space:nowrap}
+.bsc-chip:hover{border-color:var(--ac);color:var(--ac)}
+.bsc-chip.on{background:rgba(255,214,0,.15);border-color:rgba(255,214,0,.5);color:var(--ac)}
+.bsc-chip.om-on{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.4);color:#60a5fa}
+.bsc-chip.r25-on{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.4);color:#f87171}
+.bsc-chip.both-on{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.4);color:#c084fc}
+.bsc-status{font-size:10px;font-family:var(--mo);color:var(--tx3)}
+.bsc-status strong{color:var(--tx)}
+/* Cards grid */
+.bsc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+/* Card */
+.bsc-card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;overflow:hidden;transition:all .2s;position:relative;cursor:default}
+.bsc-card:hover{border-color:var(--bd);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.bsc-card-accent{height:4px;width:100%}
+.bsc-card-body{padding:16px}
+.bsc-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px}
+.bsc-card-name{font-size:13px;font-weight:700;line-height:1.3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal}
+.bsc-badges{display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0}
+.bsc-badge-om{background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid rgba(59,130,246,.35);border-radius:5px;padding:2px 7px;font-size:8px;font-weight:700;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px}
+.bsc-badge-r25{background:rgba(248,113,113,.15);color:#fca5a5;border:1px solid rgba(248,113,113,.3);border-radius:5px;padding:2px 7px;font-size:8px;font-weight:700;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px}
+.bsc-badge-both{background:rgba(168,85,247,.18);color:#d8b4fe;border:1px solid rgba(168,85,247,.35);border-radius:5px;padding:2px 7px;font-size:8px;font-weight:700;font-family:var(--mo);text-transform:uppercase;letter-spacing:.5px;animation:pulse-both 2s ease-in-out infinite}
+@keyframes pulse-both{0%,100%{box-shadow:0 0 0 0 rgba(168,85,247,.4)}50%{box-shadow:0 0 0 4px rgba(168,85,247,.1)}}
+.bsc-card-info{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.bsc-info-row{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--tx2);overflow:hidden}
+.bsc-info-icon{width:16px;flex-shrink:0;text-align:center;font-size:11px;opacity:.6}
+.bsc-info-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--mo);font-size:10px}
+.bsc-info-val.hi{color:var(--ac);font-weight:600}
+.bsc-card-actions{display:flex;gap:5px;padding-top:10px;border-top:1px solid rgba(42,48,72,.5)}
+.bsc-act{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:6px 8px;border-radius:7px;border:none;cursor:pointer;font-size:10px;font-weight:600;font-family:var(--mo);transition:all .2s;text-decoration:none}
+.bsc-act-w{background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.2)}
+.bsc-act-w:hover{background:rgba(37,211,102,.25)}
+.bsc-act-m{background:rgba(59,130,246,.12);color:#60a5fa;border:1px solid rgba(59,130,246,.2)}
+.bsc-act-m:hover{background:rgba(59,130,246,.25)}
+.bsc-act-c{background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
+.bsc-act-c:hover{background:rgba(34,197,94,.25)}
+/* Empty/loading states */
+.bsc-empty{text-align:center;padding:70px 20px;color:var(--tx3)}
+.bsc-empty-ic{font-size:52px;margin-bottom:12px;opacity:.4}
+.bsc-empty-t{font-size:14px;font-weight:600;margin-bottom:5px;color:var(--tx2)}
+.bsc-empty-s{font-size:11px;font-family:var(--mo);opacity:.6}
+/* Highlight match */
+.hi-match{color:var(--ac);font-weight:700;background:rgba(255,214,0,.12);border-radius:2px;padding:0 1px}
 
 @media(max-width:768px){
   .hdr{padding:6px 10px;gap:6px}
@@ -442,7 +518,8 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
   <div class="h-right">
     <div class="tabs" id="main-tabs">
       <button class="tab" style="display:none" onclick="switchView('lista',this)">Lista</button>
-      <button class="tab" onclick="switchView('stats',this)">Stats</button>
+      <button class="tab" id="buscar-tab" onclick="switchView('buscar',this)">🔍 Buscador</button>
+      <button class="tab" id="stats-tab-btn" onclick="switchView('stats',this)">Stats</button>
       <button class="tab om on" id="listaom-tab" onclick="switchView('listaom',this)">&#128217; LISTA OM</button>
       <button class="tab r25" id="listar25-tab" onclick="switchView('listar25',this)">&#128212; LISTA R25</button>
       <button class="tab adm" id="admin-tab" style="display:none" onclick="switchView('admin',this)">Usuarios</button>
@@ -538,6 +615,56 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
   </div>
 </div>
 
+<!-- VIEW: BUSCADOR -->
+<div id="view-buscar" class="view">
+  <!-- Hero + search -->
+  <div class="bsc-hero">
+    <div class="bsc-sub">Panel de Ventas · Búsqueda cruzada</div>
+    <div class="bsc-title">Buscá en <span>ambas listas</span></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:4px;margin-bottom:24px;font-family:var(--mo)">OM · R25 · resultados en tiempo real</div>
+    <!-- Inputs -->
+    <div class="bsc-inputs">
+      <div class="bsc-field">
+        <div class="bsc-lbl">Nombre / Razón Social</div>
+        <input class="bsc-inp" id="bsc-nombre" placeholder="Ej: García, Constructora…" oninput="bscSearch()" autocomplete="off">
+      </div>
+      <div class="bsc-field">
+        <div class="bsc-lbl">Teléfono</div>
+        <input class="bsc-inp" id="bsc-tel" placeholder="Ej: 011 1555…" oninput="bscSearch()" autocomplete="off">
+      </div>
+      <div class="bsc-field">
+        <div class="bsc-lbl">Email</div>
+        <input class="bsc-inp" id="bsc-mail" placeholder="Ej: empresa@..." oninput="bscSearch()" autocomplete="off">
+      </div>
+      <div class="bsc-field">
+        <div class="bsc-lbl">Provincia</div>
+        <input class="bsc-inp" id="bsc-prov" placeholder="Ej: Buenos Aires…" oninput="bscSearch()" autocomplete="off">
+      </div>
+    </div>
+    <!-- Filter chips + status -->
+    <div class="bsc-row2">
+      <div class="bsc-filters">
+        <span class="bsc-lbl" style="align-self:center">Mostrar:</span>
+        <button class="bsc-chip on" id="bsc-f-all" onclick="bscSetFilter('all')">Todos</button>
+        <button class="bsc-chip" id="bsc-f-om"  onclick="bscSetFilter('om')">📋 Solo OM</button>
+        <button class="bsc-chip" id="bsc-f-r25" onclick="bscSetFilter('r25')">📌 Solo R25</button>
+        <button class="bsc-chip" id="bsc-f-both" onclick="bscSetFilter('both')">⚡ En ambas listas</button>
+      </div>
+      <div class="bsc-status" id="bsc-status">Ingresá al menos 3 caracteres para buscar</div>
+    </div>
+  </div>
+  <!-- Results -->
+  <div class="bsc-wrap" style="padding-top:0">
+    <div id="bsc-results">
+      <div class="bsc-empty">
+        <div class="bsc-empty-ic">🔍</div>
+        <div class="bsc-empty-t">Listo para buscar</div>
+        <div class="bsc-empty-s">Escribí en cualquier campo de arriba para cruzar ambas listas al instante</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW: ADMIN -->
 <div id="view-admin" class="view">
   <div class="admin-wrap">
@@ -564,6 +691,23 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
 </div>
 
 
+
+<!-- MODAL: PERMISOS DE STATS -->
+<div class="modal-ov" id="perms-modal-ov">
+  <div class="modal" style="width:480px;max-width:96vw">
+    <div class="mt">🔒 Permisos de estadísticas</div>
+    <div class="ms" id="perms-modal-sub" style="margin-bottom:4px">Usuario</div>
+    <div style="font-size:11px;color:#fbbf24;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.2);border-radius:6px;padding:7px 10px;margin-bottom:14px;line-height:1.5">
+      ⚙️ Activá o desactivá qué secciones del tab <strong>Stats</strong> puede ver este usuario.
+      Los cambios aplican en su próximo login o al recargar la página.
+    </div>
+    <div id="perms-sections"></div>
+    <div class="mfoot" style="margin-top:14px">
+      <button class="btn-g" onclick="closeModal('perms-modal-ov')">Cancelar</button>
+      <button class="btn" id="perms-save-btn" onclick="savePermsModal()">✓ Guardar permisos</button>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: FIRMA PERSONAL -->
 <div class="modal-ov" id="sig-modal-ov">
@@ -993,7 +1137,7 @@ function can(perm){return !!(currentUser&&PERMS[currentRole||'vendedor']&&PERMS[
 async function initApp(){
   populateFilters();
   // Load in parallel but don't let one failure block the rest
-  const loads=[loadStates(), loadTemplate(), loadMySignature(), loadNewClients()];
+  const loads=[loadStates(), loadTemplate(), loadMySignature(), loadNewClients(), loadMyStatsPerms()];
   loads.push(loadWspTemplate());loads.push(loadClientEdits());
   await Promise.allSettled(loads);
   // Call logs load lazily on first click
@@ -1296,7 +1440,7 @@ function openModal(id,nom){
   document.getElementById('modal-ov').classList.add('open');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
-['modal-ov','user-modal-ov','pw-modal-ov','sig-modal-ov','log-history-ov','calls-report-ov'].forEach(id=>{
+['modal-ov','user-modal-ov','pw-modal-ov','sig-modal-ov','log-history-ov','calls-report-ov','perms-modal-ov'].forEach(id=>{
   document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
 });
 
@@ -1333,12 +1477,22 @@ function switchView(v,btn){
   document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
   document.getElementById('view-'+v).classList.add('on');
   btn.classList.add('on');
-  if(v==='stats'){window._statsPeriod=window._statsPeriod||'week';renderStats();}
+  if(v==='stats'){
+    if(!statsPerm('stats_view')&&currentRole!=='maestro'&&currentRole!=='admin'){
+      showToast('🔒 No tenés acceso a las estadísticas','err');return;
+    }
+    window._statsPeriod=window._statsPeriod||'week';renderStats();
+  }
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
   if(v==='newcli')initNewCliForm();
   if(v==='listar25')r25Init();
+  if(v==='buscar'){
+    // Silently preload R25 if not yet loaded (so cross-search works)
+    if(typeof r25Init==='function'&&!window._r25Rows){r25Init();}
+    document.getElementById('bsc-nombre').focus();
+  }
 }
 
 // ── STATS PERIOD FILTER ──────────────────────────────────────────────────────
@@ -1453,6 +1607,8 @@ async function renderStats(){
   });
 
   // ── KPI HERO CARDS ─────────────────────────────────────────────────────────
+  const kpiEl=document.getElementById('stats-kpis');
+  if(!statsPerm('stats_kpis')){kpiEl.innerHTML='';kpiEl.style.display='none';}else{kpiEl.style.display='';
   const kpis=[
     {n:totalAll,      lbl:'Total interacciones', sub:'registradas en logs',                   icon:'⚡', color:'var(--ac)',  glow:'rgba(255,214,0,.15)'},
     {n:totalLlamados, lbl:'Llamados',            sub:uniqueClientsCalled+' clientes únicos',  icon:'📞', color:'#4ade80',   glow:'rgba(74,222,128,.12)'},
@@ -1470,8 +1626,11 @@ async function renderStats(){
       <div style="font-size:9px;color:var(--tx3);margin-top:2px;opacity:.7">${k.sub}</div>
       <div style="position:absolute;bottom:-14px;right:-8px;font-size:64px;opacity:.06;line-height:1">${k.icon}</div>
     </div>`).join('');
+  } // end stats_kpis gate
 
   // ── DONUT CHART ────────────────────────────────────────────────────────────
+  const donutWrap=document.getElementById('stats-donut-wrap');
+  if(!statsPerm('stats_donut')){donutWrap.innerHTML='';donutWrap.style.display='none';}else{donutWrap.style.display='';
   const donutData=[
     {lbl:'Llamados',   n:totalLlamados, color:'#4ade80'},
     {lbl:'WhatsApp',   n:totalWsp,      color:'#25d366'},
@@ -1519,6 +1678,7 @@ async function renderStats(){
           <span style="font-family:var(--mo);font-size:10px;color:var(--tx3);min-width:32px;text-align:right">${Math.round(d.n/totalAll*100)}%</span>
         </div>`).join('')}
     </div>`;
+  } // end stats_donut gate
 
   // ── LEADERBOARD ────────────────────────────────────────────────────────────
   const byUser={};
@@ -1541,7 +1701,9 @@ async function renderStats(){
   const maxTotal=ranked[0]?.total||1;
   const medals=['🥇','🥈','🥉'];
 
-  document.getElementById('stats-leaderboard').innerHTML=`
+  const lbEl=document.getElementById('stats-leaderboard');
+  if(!statsPerm('stats_leaderboard')){lbEl.innerHTML='<div style="color:var(--tx3);font-size:11px;text-align:center;padding:40px;font-family:var(--mo)">🔒 Sin acceso</div>';lbEl.style.display='';}else{lbEl.style.display='';
+  lbEl.innerHTML=`
     <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Ranking de actividad</div>
     ${ranked.length===0?'<div style="color:var(--tx3);font-size:12px;text-align:center;padding:30px">Sin actividad registrada</div>':''}
     ${ranked.map((u,i)=>{
@@ -1570,6 +1732,7 @@ async function renderStats(){
         </div>
       </div>`;
     }).join('')}`;
+  } // end stats_leaderboard gate
 
   // ── USER DETAIL CARDS ──────────────────────────────────────────────────────
   const RCOLS={'Contactado — interesado':'#22c55e','Contactado — solicita presupuesto':'#FFD600',
@@ -1579,11 +1742,13 @@ async function renderStats(){
     'Respondió — solicita presupuesto':'#FFD600','Respondió — volver a contactar':'#3b82f6',
     'Mensaje enviado — sin respuesta':'#60a5fa','Email enviado — sin respuesta':'#60a5fa',
   };
+  const ucEl=document.getElementById('stats-user-cards');
+  if(!statsPerm('stats_user_cards')){ucEl.innerHTML='<div style="color:var(--tx3);font-size:11px;text-align:center;padding:30px;font-family:var(--mo);grid-column:1/-1">🔒 Sin acceso a los cards de performance</div>';return;}
   // Build per-user resultado breakdown
   const byUserRes={};
   callData.forEach(l=>{const u=l.operador||'—';if(!byUserRes[u])byUserRes[u]={};byUserRes[u][l.resultado]=(byUserRes[u][l.resultado]||0)+1;});
 
-  document.getElementById('stats-user-cards').innerHTML=ranked.map((u,i)=>{
+  ucEl.innerHTML=ranked.map((u,i)=>{
     const initials=u.name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
     const avatarColor=i===0?'var(--ac)':i===1?'#94a3b8':i===2?'#cd7c3a':['#60a5fa','#c084fc','#4ade80','#f97316','#f43f5e'][i%5];
     const topRes=Object.entries(byUserRes[u.name]||{}).sort((a,b)=>b[1]-a[1]).slice(0,4);
@@ -1625,6 +1790,359 @@ async function renderStats(){
   }).join('');
 }
 
+// ── BUSCADOR CRUZADO ─────────────────────────────────────────────────────────
+(function(){
+  let _filter='all';
+  let _debounce=null;
+
+  // Helper: get field from R25 row (uppercase or lowercase key)
+  function rcol(r,k){const u=k.toUpperCase();return(r[u]||r[k]||'').toString();}
+
+  // Highlight query inside text
+  function hi(text,q){
+    if(!q||!text)return esc2(text);
+    const idx=text.toLowerCase().indexOf(q.toLowerCase());
+    if(idx<0)return esc2(text);
+    return esc2(text.slice(0,idx))+'<span class="hi-match">'+esc2(text.slice(idx,idx+q.length))+'</span>'+esc2(text.slice(idx+q.length));
+  }
+  function esc2(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function getQuery(){
+    return {
+      nombre:(document.getElementById('bsc-nombre').value||'').trim().toLowerCase(),
+      tel:   (document.getElementById('bsc-tel').value||'').replace(/\D/g,'').slice(0,12),
+      mail:  (document.getElementById('bsc-mail').value||'').trim().toLowerCase(),
+      prov:  (document.getElementById('bsc-prov').value||'').trim().toLowerCase(),
+    };
+  }
+
+  function hasQuery(q){return q.nombre.length>=2||q.tel.length>=4||q.mail.length>=3||q.prov.length>=2;}
+
+  function matchesOM(row,q){
+    if(q.nombre && !(row[1]||'').toLowerCase().includes(q.nombre)) return false;
+    if(q.tel    && !(row[3]||'').replace(/\D/g,'').includes(q.tel)) return false;
+    if(q.mail   && !(row[4]||'').toLowerCase().includes(q.mail)) return false;
+    if(q.prov   && !(row[8]||'').toLowerCase().includes(q.prov)) return false;
+    return true;
+  }
+
+  function matchesR25(row,q){
+    if(q.nombre && !rcol(row,'NOMBRE').toLowerCase().includes(q.nombre)) return false;
+    if(q.tel    && !rcol(row,'TELEFONO').replace(/\D/g,'').includes(q.tel)) return false;
+    if(q.mail   && !rcol(row,'EMAIL').toLowerCase().includes(q.mail)) return false;
+    if(q.prov   && !rcol(row,'PRONOM').toLowerCase().includes(q.prov)) return false;
+    return true;
+  }
+
+  // Similarity key for cross-match detection
+  function nameKey(s){return(s||'').toLowerCase().replace(/[^a-záéíóúñ0-9]/gi,'').slice(0,8);}
+  function telKey(s){ return(s||'').replace(/\D/g,'').slice(-8);}
+  function mailKey(s){return(s||'').toLowerCase().trim();}
+
+  function buildCard(item, q){
+    const isOM  = item.src==='om';
+    const isR25 = item.src==='r25';
+    const isBoth= item.src==='both';
+
+    const accentColor = isBoth?'linear-gradient(90deg,#60a5fa,#c084fc)' : isOM?'#3b82f6':'#f87171';
+    const borderColor = isBoth?'rgba(168,85,247,.4)' : isOM?'rgba(59,130,246,.3)':'rgba(248,113,113,.3)';
+
+    const badgeHtml = isBoth
+      ? '<span class="bsc-badge-both">⚡ Ambas listas</span>'
+      : isOM
+        ? '<span class="bsc-badge-om">📋 OM</span>'
+        : '<span class="bsc-badge-r25">📌 R25</span>';
+
+    // Build info rows
+    const rows=[];
+    if(item.tel) rows.push({ic:'📞',v:hi(item.tel, q.tel?q.tel:'')});
+    if(item.mail)rows.push({ic:'✉️', v:hi(item.mail,q.mail)});
+    if(item.loc) rows.push({ic:'📍',v:esc2(item.loc+(item.prov?', '+item.prov:''))});
+    if(item.tipo)rows.push({ic:'🏷️',v:esc2(item.tipo)});
+    if(item.contacto)rows.push({ic:'👤',v:esc2(item.contacto)});
+
+    // Actions
+    let actHtml='';
+    if(item.tel){
+      const dig=item.tel.replace(/\D/g,''), wa=dig.startsWith('54')?dig:'54'+dig;
+      actHtml+=`<a class="bsc-act bsc-act-w" href="https://web.whatsapp.com/send?phone=${wa}" target="_blank">💬 WSP</a>`;
+      actHtml+=`<a class="bsc-act bsc-act-c" href="tel:${esc2(item.tel)}">📞 Llamar</a>`;
+    }
+    if(item.mail){
+      const gm='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(item.mail);
+      actHtml+=`<a class="bsc-act bsc-act-m" href="${gm}" target="_blank">✉️ Mail</a>`;
+    }
+
+    return `<div class="bsc-card" style="border-color:${borderColor};box-shadow:0 0 0 0 transparent">
+      <div class="bsc-card-accent" style="background:${accentColor}"></div>
+      <div class="bsc-card-body">
+        <div class="bsc-card-top">
+          <div class="bsc-card-name">${hi(item.nombre,q.nombre)}</div>
+          <div class="bsc-badges">${badgeHtml}</div>
+        </div>
+        <div class="bsc-card-info">
+          ${rows.map(r=>`<div class="bsc-info-row"><span class="bsc-info-icon">${r.ic}</span><span class="bsc-info-val">${r.v}</span></div>`).join('')}
+          ${!rows.length?'<span style="font-size:10px;color:var(--tx3);font-family:var(--mo)">Sin datos de contacto</span>':''}
+        </div>
+        ${actHtml?`<div class="bsc-card-actions">${actHtml}</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  window.bscSetFilter=function(f){
+    _filter=f;
+    ['all','om','r25','both'].forEach(k=>{
+      const el=document.getElementById('bsc-f-'+k);
+      if(!el)return;
+      el.className='bsc-chip'+(k===f?(' '+(k==='all'?'on':k+'-on')):'');
+    });
+    bscRender();
+  };
+
+  window.bscSearch=function(){
+    clearTimeout(_debounce);
+    _debounce=setTimeout(bscRender, 90);
+  };
+
+  function bscRender(){
+    const q=getQuery();
+    const el=document.getElementById('bsc-results');
+    const status=document.getElementById('bsc-status');
+    if(!el) return;
+
+    if(!hasQuery(q)){
+      status.innerHTML='Ingresá al menos <strong>2 caracteres</strong> para buscar';
+      el.innerHTML=`<div class="bsc-empty"><div class="bsc-empty-ic">🔍</div><div class="bsc-empty-t">Listo para buscar</div><div class="bsc-empty-s">Escribí en cualquier campo para cruzar ambas listas al instante</div></div>`;
+      return;
+    }
+
+    // Search OM
+    const omRows = typeof ROWS!=='undefined' ? ROWS : [];
+    const r25Rows= window._r25Rows || [];
+
+    const omHits = omRows.filter(r=>matchesOM(r,q)).map(r=>({
+      src:'om', id:r[0],
+      nombre:r[1]||'', tipo:r[2]||'', tel:r[3]||'', mail:r[4]||'',
+      contacto:r[5]||'', loc:(r[7]?(r[7]+(r[8]?', '+r[8]:'')):r[8])||'',
+      prov:r[8]||'',
+      _nk:nameKey(r[1]), _tk:telKey(r[3]), _mk:mailKey(r[4])
+    }));
+
+    const r25Hits= r25Rows.filter(r=>matchesR25(r,q)).map(r=>({
+      src:'r25', id:'r25_'+rcol(r,'NUMERO'),
+      nombre:rcol(r,'NOMBRE')||'', tipo:rcol(r,'IVANOM')||'',
+      tel:rcol(r,'TELEFONO')||'', mail:rcol(r,'EMAIL')||'',
+      contacto:rcol(r,'CONTACTO')||'', loc:rcol(r,'LOCALIDAD')||'',
+      prov:rcol(r,'PRONOM')||'',
+      _nk:nameKey(rcol(r,'NOMBRE')), _tk:telKey(rcol(r,'TELEFONO')), _mk:mailKey(rcol(r,'EMAIL'))
+    }));
+
+    // Cross-match detection: merge items that share name/tel/mail
+    const merged=[];
+    const usedR25=new Set();
+
+    omHits.forEach(om=>{
+      let match=null;
+      for(let i=0;i<r25Hits.length;i++){
+        if(usedR25.has(i)) continue;
+        const r=r25Hits[i];
+        const sametel  = om._tk.length>=6 && r._tk.length>=6 && om._tk===r._tk;
+        const samemail = om._mk.length>=5 && r._mk.length>=5 && om._mk===r._mk;
+        const samename = om._nk.length>=5 && r._nk.length>=5 && om._nk===r._nk;
+        if(sametel||samemail||samename){match=i;break;}
+      }
+      if(match!==null){
+        usedR25.add(match);
+        merged.push({...om,src:'both'});
+      } else {
+        merged.push(om);
+      }
+    });
+    r25Hits.forEach((r,i)=>{if(!usedR25.has(i)) merged.push(r);});
+
+    // Apply filter
+    const filtered = _filter==='all' ? merged
+      : _filter==='both' ? merged.filter(x=>x.src==='both')
+      : merged.filter(x=>x.src===_filter);
+
+    const nBoth=merged.filter(x=>x.src==='both').length;
+    const nOM  =merged.filter(x=>x.src==='om').length;
+    const nR25 =merged.filter(x=>x.src==='r25').length;
+
+    status.innerHTML=`<strong>${filtered.length}</strong> resultado${filtered.length!==1?'s':''}${nBoth?` · <span style="color:#c084fc;font-weight:700">⚡ ${nBoth} en ambas listas</span>`:''}
+      <span style="margin-left:6px;color:#93c5fd">OM:${nOM+nBoth}</span>
+      <span style="margin-left:6px;color:#fca5a5">R25:${nR25+nBoth}</span>`;
+
+    if(!filtered.length){
+      el.innerHTML=`<div class="bsc-empty"><div class="bsc-empty-ic">😶</div><div class="bsc-empty-t">Sin resultados</div><div class="bsc-empty-s">Probá con otros términos o cambiá el filtro de lista</div></div>`;
+      return;
+    }
+
+    // Sort: both first, then by name
+    filtered.sort((a,b)=>{
+      if(a.src==='both'&&b.src!=='both')return -1;
+      if(b.src==='both'&&a.src!=='both')return 1;
+      return (a.nombre||'').localeCompare(b.nombre||'','es');
+    });
+
+    el.innerHTML=`<div class="bsc-grid">${filtered.slice(0,120).map(item=>buildCard(item,q)).join('')}</div>
+      ${filtered.length>120?`<div style="text-align:center;padding:18px;font-size:11px;font-family:var(--mo);color:var(--tx3)">Mostrando 120 de ${filtered.length} — afinando la búsqueda verás más resultados</div>`:''}`;
+  }
+})();
+
+// ── STATS PERMISSIONS SYSTEM ─────────────────────────────────────────────────
+// Default: all sections visible. Maestro can restrict per-user.
+const STATS_SECTIONS = [
+  {key:'stats_view',       icon:'📊', title:'Tab Stats completo',     desc:'Puede ver/acceder al tab de estadísticas'},
+  {key:'stats_kpis',       icon:'🔢', title:'KPIs resumen',            desc:'Tarjetas con totales: contactos, llamados, WSP, mail, notas'},
+  {key:'stats_donut',      icon:'🍩', title:'Gráfico de resultados',   desc:'Donut chart con breakdown de resultados'},
+  {key:'stats_leaderboard',icon:'🏆', title:'Leaderboard del equipo',  desc:'Ranking de vendedores por actividad'},
+  {key:'stats_user_cards', icon:'👤', title:'Cards de performance',    desc:'Tarjetas individuales con detalle por vendedor'},
+];
+
+window._myStatsPerms = null; // null = not loaded yet → show everything
+let _permsTargetId = null;
+let _permsCurrentValues = {};
+
+function _defaultPerms(){
+  const p={};STATS_SECTIONS.forEach(s=>{p[s.key]=true;});return p;
+}
+
+async function loadMyStatsPerms(){
+  if(!currentUser)return;
+  try{
+    const {data,error}=await db.from('user_permissions')
+      .select('perms').eq('user_id',currentUser.id).maybeSingle();
+    if(error){
+      // Table might not exist yet → treat as all-allowed
+      window._myStatsPerms=_defaultPerms();
+      return;
+    }
+    window._myStatsPerms = data?.perms ? {..._defaultPerms(),...data.perms} : _defaultPerms();
+  }catch(e){
+    window._myStatsPerms=_defaultPerms();
+  }
+  // Apply to tab visibility immediately
+  _applyStatsTabVisibility();
+}
+
+function _applyStatsTabVisibility(){
+  const p=window._myStatsPerms||_defaultPerms();
+  const statsTab=document.getElementById('stats-tab-btn');
+  if(statsTab) statsTab.style.display = p.stats_view ? '' : 'none';
+}
+
+// perm(key) → returns true if allowed (default true for maestro/admin always)
+function statsPerm(key){
+  if(currentRole==='maestro'||currentRole==='admin') return true;
+  const p=window._myStatsPerms||_defaultPerms();
+  return p[key]!==false;
+}
+
+async function openPermsModal(userId, displayName){
+  _permsTargetId=userId;
+  document.getElementById('perms-modal-sub').textContent='🔒 Permisos de: '+displayName;
+  document.getElementById('perms-save-btn').disabled=false;
+  document.getElementById('perms-save-btn').textContent='✓ Guardar permisos';
+
+  // Load current perms for this user
+  let perms=_defaultPerms();
+  try{
+    const {data}=await db.from('user_permissions')
+      .select('perms').eq('user_id',userId).maybeSingle();
+    if(data?.perms) perms={...perms,...data.perms};
+  }catch(e){ /* table may not exist, use defaults */ }
+  _permsCurrentValues={...perms};
+  _renderPermsSections(perms);
+  document.getElementById('perms-modal-ov').classList.add('open');
+}
+
+function _renderPermsSections(perms){
+  const isStatsOff = perms.stats_view===false;
+  document.getElementById('perms-sections').innerHTML=STATS_SECTIONS.map((s,i)=>{
+    const checked = perms[s.key]!==false;
+    // Sub-sections disabled if stats_view is off
+    const isSubSection = s.key!=='stats_view';
+    const disabled = isSubSection && isStatsOff;
+    return `<div class="perm-section${disabled?' disabled-perm':''}" id="perm-sec-${s.key}">
+      <div class="perm-section-hdr">
+        <div class="perm-section-info">
+          <div class="perm-section-title">${s.icon} ${s.title}
+            <span class="perm-badge ${checked&&!disabled?'perm-badge-on':'perm-badge-off'}" id="perm-badge-${s.key}">${checked&&!disabled?'Activo':'Desactivado'}</span>
+          </div>
+          <div class="perm-section-desc">${s.desc}</div>
+        </div>
+        <label class="perm-toggle">
+          <input type="checkbox" id="perm-chk-${s.key}" ${checked?'checked':''} ${disabled?'disabled':''}
+            onchange="permToggle('${s.key}',this.checked)">
+          <span class="perm-slider"></span>
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function permToggle(key, checked){
+  _permsCurrentValues[key]=checked;
+  // If toggling stats_view off → disable and uncheck all sub-sections
+  const isStatsOff = _permsCurrentValues.stats_view===false;
+  STATS_SECTIONS.forEach(s=>{
+    const isSubSection = s.key!=='stats_view';
+    const sec=document.getElementById('perm-sec-'+s.key);
+    const badge=document.getElementById('perm-badge-'+s.key);
+    const chk=document.getElementById('perm-chk-'+s.key);
+    if(!sec||!badge||!chk)return;
+    const active = isSubSection
+      ? (_permsCurrentValues[s.key]!==false && !isStatsOff)
+      : _permsCurrentValues[s.key]!==false;
+    badge.className='perm-badge '+(active?'perm-badge-on':'perm-badge-off');
+    badge.textContent=active?'Activo':'Desactivado';
+    if(isSubSection){
+      sec.className='perm-section'+(isStatsOff?' disabled-perm':'');
+      chk.disabled=isStatsOff;
+    }
+  });
+}
+
+async function savePermsModal(){
+  if(!_permsTargetId)return;
+  const btn=document.getElementById('perms-save-btn');
+  btn.disabled=true;btn.textContent='Guardando…';
+  try{
+    // Build final perms (if stats_view is off, force all sub-sections off too)
+    const finalPerms={..._permsCurrentValues};
+    if(!finalPerms.stats_view){
+      STATS_SECTIONS.forEach(s=>{if(s.key!=='stats_view')finalPerms[s.key]=false;});
+    }
+    const {error}=await db.from('user_permissions').upsert(
+      {user_id:_permsTargetId, perms:finalPerms, updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+    if(error)throw error;
+    showToast('✓ Permisos guardados — aplican en el próximo login del usuario');
+    closeModal('perms-modal-ov');
+  }catch(e){
+    // If table doesn't exist, show helpful message
+    if(e.message&&(e.message.includes('does not exist')||e.message.includes('relation'))){
+      showToast('⚠️ Creá la tabla user_permissions en Supabase primero. Ver instrucciones.','err');
+      document.getElementById('perms-sections').insertAdjacentHTML('afterbegin',`
+        <div style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:7px;padding:12px;margin-bottom:12px;font-size:11px;color:#fcd34d;line-height:1.7">
+          <strong>⚙️ Crear tabla en Supabase SQL Editor:</strong><br>
+          <code style="font-family:var(--mo);font-size:10px;background:rgba(0,0,0,.3);padding:6px 8px;border-radius:4px;display:block;margin-top:6px;white-space:pre-wrap">CREATE TABLE user_permissions (
+  user_id TEXT PRIMARY KEY,
+  perms JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE user_permissions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON user_permissions FOR ALL USING (true) WITH CHECK (true);</code>
+        </div>`);
+    } else {
+      showToast('Error guardando permisos: '+e.message,'err');
+    }
+  }
+  btn.disabled=false;btn.textContent='✓ Guardar permisos';
+}
+
 // ── ADMIN: USUARIOS ──
 async function loadUsers(){
   document.getElementById('users-list').innerHTML=`<div style="text-align:center;padding:30px;color:var(--tx3);font-family:var(--mo)"><span class="spin"></span>Cargando…</div>`;
@@ -1656,6 +2174,7 @@ function renderUsers(users){
         <button class="bsm be" onclick="openEditUserModal(window._usersMap['${u.id}'])">Editar</button>
         <button class="bsm br2" onclick="openResetPwModal('${u.id}','${u.username.replace(/'/g,"\\'")}')">Blanquear clave</button>
         <button class="bsm bt2" onclick="toggleUserActive('${u.id}',${u.active})">${u.active?'Desact.':'Activar'}</button>
+        <button class="bsm" style="background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.25);color:#c084fc" onclick="openPermsModal('${u.id}','${(u.display_name||u.username).replace(/'/g,"\\'")}')">🔒 Permisos</button>
         ${canDel?`<button class="bsm bd" onclick="deleteUser('${u.id}','${u.username.replace(/'/g,"\\'")}')">Eliminar</button>`:''}
       </div>
     </td>
@@ -3299,6 +3818,9 @@ async function deleteNewClient(id){
                   if(s.note)   R.notes[s.client_id]=s.note;
                 });
                 R.loaded=true;
+                window._r25Rows=R.rows;
+                window._r25Called=R.called;
+                window._r25Notes=R.notes;
                 g('r25-loading').style.display='none';
                 r25Apply();
                 if(typeof updateStats==='function') updateStats();
@@ -3676,6 +4198,9 @@ async function deleteNewClient(id){
                   g('r25-imp-msg').textContent='Guardando… '+sent.toLocaleString()+'/'+total.toLocaleString();
                   if(sent>=total){
                     R.rows=rows; R.loaded=true; R.called={}; R.notes={};
+                    window._r25Rows=R.rows;
+                    window._r25Called=R.called;
+                    window._r25Notes=R.notes;
                     r25PopFilters(); r25Apply();
                     closeModal('r25-import-ov'); r25ImpReset();
                     showToast('Lista R25 importada: '+total.toLocaleString()+' registros ✓','ok');
@@ -3749,6 +4274,17 @@ async function deleteNewClient(id){
 </div>
 
 <script>
+function tlnToggle(idx){
+  const preview=document.getElementById('tln-p-'+idx);
+  const full   =document.getElementById('tln-f-'+idx);
+  const btn    =document.getElementById('tln-btn-'+idx);
+  if(!full)return;
+  const isOpen=full.style.display!=='none';
+  full.style.display   =isOpen?'none':'block';
+  if(preview) preview.style.display=isOpen?'':'none';
+  if(btn) btn.textContent=isOpen?'▼':'▲';
+}
+
 function closeUserDetail(){
   document.getElementById('user-detail-ov').style.display='none';
 }
@@ -3890,20 +4426,49 @@ function openUserDetail(name){
     ...userNotas.map(l=>({ts:l.created_at,canal:'nota',resultado:'',obs:l.obs||''})),
   ].sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,60);
 
+  let _tlIdx=0;
   document.getElementById('udh-timeline').innerHTML=timeline.length
     ?timeline.map(e=>{
       const ts=e.ts?new Date(e.ts).toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
       const col=CANAL_COL[e.canal]||'var(--tx3)';
       const lbl=CANAL_LABEL[e.canal]||e.canal;
+      const isNota=e.canal==='nota';
+      const idx=_tlIdx++;
+      const hasObs=!!(e.obs&&e.obs.trim());
+
+      // For notas: show collapsible text block
+      let obsHtml='';
+      if(isNota && hasObs){
+        const preview=e.obs.length>60?e.obs.slice(0,60)+'…':e.obs;
+        obsHtml=`
+          <div id="tln-p-${idx}" style="font-size:9px;color:var(--tx3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer" onclick="tlnToggle(${idx})" title="Click para expandir">
+            ${preview}
+          </div>
+          <div id="tln-f-${idx}" style="display:none;font-size:10px;color:var(--tx2);margin-top:5px;background:rgba(251,146,60,.06);border:1px solid rgba(251,146,60,.18);border-radius:6px;padding:8px 10px;line-height:1.5;white-space:pre-wrap;word-break:break-word;cursor:pointer" onclick="tlnToggle(${idx})">
+            ${e.obs.replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+          </div>`;
+      } else if(!isNota && hasObs){
+        obsHtml=`<div style="font-size:9px;color:var(--tx3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.obs}</div>`;
+      }
+
+      const expandBtn = isNota && hasObs
+        ? `<button id="tln-btn-${idx}" onclick="tlnToggle(${idx})" style="background:rgba(251,146,60,.1);border:1px solid rgba(251,146,60,.25);color:#fb923c;border-radius:3px;padding:1px 5px;font-size:8px;font-family:var(--mo);cursor:pointer;transition:all .15s;flex-shrink:0">▼</button>`
+        : isNota && !hasObs
+          ? `<span style="font-size:8px;color:var(--tx3);font-family:var(--mo);flex-shrink:0;font-style:italic">sin texto</span>`
+          : '';
+
       return `<div style="display:flex;gap:8px;align-items:flex-start;padding-bottom:8px;border-bottom:1px solid rgba(42,48,72,.4)">
         <div style="width:3px;border-radius:2px;background:${col};flex-shrink:0;margin-top:3px;align-self:stretch"></div>
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;margin-bottom:2px">
             <span style="font-size:10px;font-weight:600;color:${col}">${lbl}</span>
-            <span style="font-family:var(--mo);font-size:9px;color:var(--tx3);flex-shrink:0">${ts}</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              ${expandBtn}
+              <span style="font-family:var(--mo);font-size:9px;color:var(--tx3)">${ts}</span>
+            </div>
           </div>
           ${e.resultado?`<div style="font-size:10px;color:var(--tx2)">${e.resultado}</div>`:''}
-          ${e.obs?`<div style="font-size:9px;color:var(--tx3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.obs}</div>`:''}
+          ${obsHtml}
         </div>
       </div>`;
     }).join('')
