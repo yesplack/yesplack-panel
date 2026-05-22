@@ -1608,7 +1608,7 @@ async function renderStats(){
 
   // ── KPI HERO CARDS ─────────────────────────────────────────────────────────
   const kpiEl=document.getElementById('stats-kpis');
-  if(!statsPerm('stats_kpis')){kpiEl.innerHTML='';kpiEl.style.display='none';}else{kpiEl.style.display='';
+  if(!statsPerm('stats_kpis')){kpiEl.innerHTML='';kpiEl.style.display='none';}else{kpiEl.style.display='grid';
   const kpis=[
     {n:totalAll,      lbl:'Total interacciones', sub:'registradas en logs',                   icon:'⚡', color:'var(--ac)',  glow:'rgba(255,214,0,.15)'},
     {n:totalLlamados, lbl:'Llamados',            sub:uniqueClientsCalled+' clientes únicos',  icon:'📞', color:'#4ade80',   glow:'rgba(74,222,128,.12)'},
@@ -1630,7 +1630,7 @@ async function renderStats(){
 
   // ── DONUT CHART ────────────────────────────────────────────────────────────
   const donutWrap=document.getElementById('stats-donut-wrap');
-  if(!statsPerm('stats_donut')){donutWrap.innerHTML='';donutWrap.style.display='none';}else{donutWrap.style.display='';
+  if(!statsPerm('stats_donut')){donutWrap.innerHTML='';donutWrap.style.display='none';}else{donutWrap.style.display='flex';
   const donutData=[
     {lbl:'Llamados',   n:totalLlamados, color:'#4ade80'},
     {lbl:'WhatsApp',   n:totalWsp,      color:'#25d366'},
@@ -1702,7 +1702,7 @@ async function renderStats(){
   const medals=['🥇','🥈','🥉'];
 
   const lbEl=document.getElementById('stats-leaderboard');
-  if(!statsPerm('stats_leaderboard')){lbEl.innerHTML='<div style="color:var(--tx3);font-size:11px;text-align:center;padding:40px;font-family:var(--mo)">🔒 Sin acceso</div>';lbEl.style.display='';}else{lbEl.style.display='';
+  if(!statsPerm('stats_leaderboard')){lbEl.innerHTML='<div style="color:var(--tx3);font-size:11px;text-align:center;padding:40px;font-family:var(--mo)">🔒 Sin acceso</div>';lbEl.style.display='block';}else{lbEl.style.display='block';
   lbEl.innerHTML=`
     <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Ranking de actividad</div>
     ${ranked.length===0?'<div style="color:var(--tx3);font-size:12px;text-align:center;padding:30px">Sin actividad registrada</div>':''}
