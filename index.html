@@ -1169,6 +1169,18 @@ function render(){
       :`<span class="no-d" style="cursor:pointer;color:var(--tx3)" onclick="startInlineEdit('email','${id}')">+ email</span>`;
     const editEmailBtn=`<button class="ib" style="background:transparent;border:none;color:var(--tx3);font-size:10px;opacity:.5;cursor:pointer" onclick="startInlineEdit('email','${id}')" title="Editar email">✏</button>`;
     const ct=r[5]?` <span style="color:var(--tx3);font-size:9px">(${r[5]})</span>`:'';
+    const hasContact=!!(r[3]||r[4]);
+    if(!hasContact) return `<tr class="nc-row" id="row-${id}" style="opacity:.22;pointer-events:none">
+      <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
+      <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}</td>
+      <td>${badge(r[2])}</td>
+      <td><span style="font-size:10px;font-style:italic;font-family:var(--mo)">sin tel.</span></td>
+      <td><span style="font-size:10px;font-style:italic;font-family:var(--mo)">sin mail</span></td>
+      <td title="${r[7]}" style="font-size:11px">${r[7]||'—'}</td>
+      <td style="font-size:11px">${r[8]}</td>
+      <td title="${r[9]}" style="font-size:11px;color:var(--tx2)">${r[9]}</td>
+      <td></td><td></td>
+    </tr>`;
     return `<tr class="${ic?'called':''}" id="row-${id}" onclick="pinRow('${id}',event)">
       <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
       <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}</td>
@@ -1228,10 +1240,22 @@ function saveNote(id){
 /* toggleCall replaced by log version below */
 
 function updateStats(){
-  const tc=Object.keys(called).filter(k=>called[k]).length,tot=ROWS.length;
-  document.getElementById('total-c').textContent=tot.toLocaleString('es');
-  document.getElementById('called-c').textContent=tc.toLocaleString('es');
-  const pct=tot?Math.round(tc/tot*100):0;
+  // Clientes contactables = tienen teléfono O mail
+  const contactableOM=ROWS.filter(r=>r[3]||r[4]).length;
+  // Llamados solo entre contactables
+  const calledOM=Object.keys(called).filter(k=>{
+    if(!called[k])return false;
+    const row=ROWS.find(r=>r[0]===k);
+    return row&&!!(row[3]||row[4]);
+  }).length;
+  // R25 stats (expuesto por el IIFE cuando cargó)
+  const r25s=window._r25Stats?window._r25Stats():{total:0,contactable:0,called:0};
+  const totalAll=ROWS.length+r25s.total;
+  const contactableAll=contactableOM+r25s.contactable;
+  const calledAll=calledOM+r25s.called;
+  document.getElementById('total-c').textContent=totalAll.toLocaleString('es');
+  document.getElementById('called-c').textContent=calledAll.toLocaleString('es');
+  const pct=contactableAll?Math.round(calledAll/contactableAll*100):0;
   document.getElementById('pct-t').textContent=pct+'%';
   document.getElementById('prog-f').style.width=pct+'%';
 }
@@ -2466,7 +2490,9 @@ function buildWspUrl(clientName,clientPhone,companyName){
     .replace(/{NOMBRE}/g,clientName)
     .replace(/{EMPRESA}/g,companyName||clientName)
     .replace(/{TELEFONO}/g,clientPhone||'');
-  return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
+  // web.whatsapp.com/send abre directo en WA Web sin página intermedia
+  // Para la app de Windows también funciona si tiene WA instalado
+  return `https://web.whatsapp.com/send?phone=${intl}&text=${encodeURIComponent(msg)}`;
 }
 
 
@@ -2574,31 +2600,32 @@ async function saveAsNamedTemplate(type){
 }
 
 async function loadNamedTemplate(id,type){
-  const card=tplLibrary[type].find(c=>c.id===id);
-  if(!card)return;
+  const card=tplLibrary[type].find(c=>String(c.id)===String(id));
+  if(!card){showToast('Template no encontrado','err');return;}
   if(type==='email'){
     if(card.subject)document.getElementById('tpl-subject').value=card.subject;
     if(card.body_html)document.getElementById('tpl-body').innerHTML=card.body_html;
     if(card.cc!==undefined)document.getElementById('tpl-cc').value=card.cc||'';
-    // Also set as active for this user
     const key='user_email_tpl_'+(currentUser?.username||'');
     localStorage.setItem(key,JSON.stringify({subject:card.subject||'',body_html:card.body_html||'',cc:card.cc||''}));
     emailTemplate={subject:card.subject||emailTemplate.subject,body_html:card.body_html||'',cc:card.cc||''};
     setActiveLocalTpl(type,id);
   } else {
-    if(card.body)document.getElementById('wsp-body').value=card.body;
+    // WSP: set body including emojis
+    const body=card.body||'';
+    document.getElementById('wsp-body').value=body;
     const key='user_wsp_tpl_'+(currentUser?.username||'');
-    localStorage.setItem(key,JSON.stringify({body:card.body||''}));
-    wspTemplate={body:card.body||''};
+    localStorage.setItem(key,JSON.stringify({body}));
+    wspTemplate={body};
     setActiveLocalTpl(type,id);
     updateWspPreview();
   }
-  renderTemplateCards(type); // refresh to show active badge
+  renderTemplateCards(type);
   showToast('✓ "'+card.name+'" activa en tu sesión');
 }
 
 async function deleteNamedTemplate(id,type){
-  const card=tplLibrary[type].find(c=>c.id===id);
+  const card=tplLibrary[type].find(c=>String(c.id)===String(id));
   if(!confirm('¿Eliminar la plantilla "'+(card?.name||id)+'"?'))return;
   try{
     const {error}=await db.from('templates_library').delete().eq('id',id);
@@ -3159,6 +3186,7 @@ async function deleteNewClient(id){
                 R.loaded=true;
                 g('r25-loading').style.display='none';
                 r25Apply();
+                if(typeof updateStats==='function') updateStats();
               });
           }
         });
@@ -3244,13 +3272,22 @@ async function deleteNewClient(id){
       var loc=col(r,'LOCALIDAD')||'—', prov=col(r,'PRONOM')||'—';
       var contacto=col(r,'CONTACTO');
       var isCalled=!!R.called[id], note=R.notes[id]||'';
+      var hasContact=!!(tel||email);
+      if(!hasContact) return '<tr class="nc-row" id="r25r-'+escId+'" style="opacity:.22;pointer-events:none">'+
+        '<td style="color:var(--tx3);font-family:var(--mo);font-size:10px">'+esc(String(num))+'</td>'+
+        '<td style="font-weight:600">'+esc(nom)+(contacto?'<br><span style="font-size:10px;color:var(--tx3);font-weight:400">'+esc(contacto)+'</span>':'')+'</td>'+
+        '<td>'+r25IvaBadge(iva)+'</td>'+
+        '<td><span style="font-size:10px;font-style:italic;font-family:var(--mo)">sin tel.</span></td>'+
+        '<td><span style="font-size:10px;font-style:italic;font-family:var(--mo)">sin mail</span></td>'+
+        '<td>'+esc(loc)+'</td><td>'+esc(prov)+'</td><td></td><td></td>'+
+        '</tr>';
 
       // Teléfono
       var telHtml='<span class="no-d">—</span>';
       if(tel){
         var dig=tel.replace(/\D/g,''), wa=dig.startsWith('54')?dig:'54'+dig;
         telHtml='<div class="ag">'+
-          '<a class="ib ib-w" href="https://wa.me/'+wa+'" target="_blank">&#128172;</a>'+
+          '<a class="ib ib-w" href="https://web.whatsapp.com/send?phone='+wa+'&text='+encodeURIComponent((typeof wspTemplate!=="undefined"&&wspTemplate.body)||'Hola '+esc(nom))+'" target="_blank">&#128172;</a>'+
           '<a class="ib ib-m" href="tel:'+esc(tel)+'">&#128222;</a>'+
           '<span style="font-size:11px;font-family:var(--mo)">'+esc(tel)+'</span></div>';
       }
@@ -3463,6 +3500,18 @@ async function deleteNewClient(id){
     });
   };
 
+
+  // ── STATS EXPORT (para el contador global del header) ─────────────────────
+  window._r25Stats=function(){
+    var total=R.rows.length;
+    var contactable=R.rows.filter(function(r){return !!(col(r,'TELEFONO').trim()||col(r,'EMAIL').trim());}).length;
+    var calledC=0;
+    R.rows.forEach(function(r){
+      var id='r25_'+col(r,'NUMERO');
+      if(R.called[id]&&(col(r,'TELEFONO').trim()||col(r,'EMAIL').trim()))calledC++;
+    });
+    return{total:total,contactable:contactable,called:calledC};
+  };
 
   window.r25Export=function(){
     if(!R.filtered.length)return;
