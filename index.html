@@ -551,6 +551,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
     <div class="fg"><div class="fl">Provincia</div><select class="fs" id="f-prov" onchange="syncLocs()"><option value="">Todas</option></select></div>
     <div class="fg"><div class="fl">Localidad</div><select class="fs" id="f-loc" onchange="applyFilters()"><option value="">Todas</option></select></div>
     <div class="fg"><div class="fl">Teléfono</div><select class="fs" id="f-tel" onchange="applyFilters()" style="min-width:105px"><option value="">Todos</option><option value="con">Con tel.</option><option value="sin">Sin tel.</option></select></div>
+    <div class="fg"><div class="fl">Email</div><select class="fs" id="f-mail" onchange="applyFilters()" style="min-width:105px"><option value="">Todos</option><option value="con">Con mail</option><option value="sin">Sin mail</option></select></div>
     <div class="fg"><div class="fl">Estado</div><label class="ckw"><input type="checkbox" id="f-pend" onchange="applyFilters()"> Pendientes</label></div>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
       <button class="btn-g" onclick="resetFilters()">↺ Limpiar</button>
@@ -1265,6 +1266,7 @@ function applyFilters(){
   const tipo=document.getElementById('f-tipo').value,vend=document.getElementById('f-vend').value;
   const prov=document.getElementById('f-prov').value,loc=document.getElementById('f-loc').value;
   const tel=document.getElementById('f-tel').value,pend=document.getElementById('f-pend').checked;
+  const mail=document.getElementById('f-mail').value;
   filtered=ROWS.filter(r=>{
     if(tipo&&r[2]!==tipo)return false;
     if(vend&&r[9]!==vend)return false;
@@ -1272,6 +1274,8 @@ function applyFilters(){
     if(loc&&r[7]!==loc)return false;
     if(tel==='con'&&!r[3])return false;
     if(tel==='sin'&&r[3])return false;
+    if(mail==='con'&&!r[4])return false;
+    if(mail==='sin'&&r[4])return false;
     if(pend&&called[r[0]])return false;
     if(q&&!(r[1]+' '+r[5]+' '+r[6]+' '+r[7]+' '+r[3]+' '+r[4]+' '+r[11]).toLowerCase().includes(q))return false;
     return true;
@@ -1286,7 +1290,7 @@ function sortBy(col){
   doSort();page=1;render();
 }
 function resetFilters(){
-  ['search','f-tipo','f-vend','f-prov','f-loc','f-tel'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['search','f-tipo','f-vend','f-prov','f-loc','f-tel','f-mail'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-pend').checked=false;syncLocs();
 }
 
@@ -3576,6 +3580,7 @@ async function deleteNewClient(id){
     <div class="fg"><div class="fl">Condición IVA</div><select class="fs" id="r25-f-iva" onchange="r25Apply()"><option value="">Todas</option></select></div>
     <div class="fg"><div class="fl">Provincia</div><select class="fs" id="r25-f-prov" onchange="r25Apply()"><option value="">Todas</option></select></div>
     <div class="fg"><div class="fl">Teléfono</div><select class="fs" id="r25-f-tel" onchange="r25Apply()" style="min-width:105px"><option value="">Todos</option><option value="con">Con tel.</option><option value="sin">Sin tel.</option></select></div>
+    <div class="fg"><div class="fl">Email</div><select class="fs" id="r25-f-mail" onchange="r25Apply()" style="min-width:105px"><option value="">Todos</option><option value="con">Con mail</option><option value="sin">Sin mail</option></select></div>
     <div class="fg"><div class="fl">Estado</div><label class="ckw"><input type="checkbox" id="r25-f-pend" onchange="r25Apply()"> Pendientes</label></div>
     <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
       <button class="btn-g" onclick="r25ResetFilters()">&#8635; Limpiar</button>
@@ -3877,6 +3882,7 @@ async function deleteNewClient(id){
     var q=(g('r25-search').value||'').toLowerCase().trim();
     var fiva=g('r25-f-iva').value, fprov=g('r25-f-prov').value;
     var ftel=g('r25-f-tel').value, fpend=g('r25-f-pend').checked;
+    var fmail=g('r25-f-mail')?g('r25-f-mail').value:'';
     R.filtered=R.rows.filter(function(r){
       var id='r25_'+col(r,'NUMERO');
       if(fpend&&R.called[id]) return false;
@@ -3885,6 +3891,9 @@ async function deleteNewClient(id){
       var tel=col(r,'TELEFONO').trim();
       if(ftel==='con'&&!tel) return false;
       if(ftel==='sin'&&tel) return false;
+      var email=col(r,'EMAIL').trim();
+      if(fmail==='con'&&!email) return false;
+      if(fmail==='sin'&&email) return false;
       if(q){
         var hay=[col(r,'NOMBRE'),col(r,'CUIT'),col(r,'DIRECCION'),col(r,'LOCALIDAD'),col(r,'CONTACTO')].join(' ').toLowerCase();
         if(hay.indexOf(q)<0) return false;
@@ -3906,6 +3915,7 @@ async function deleteNewClient(id){
     g('r25-search').value='';
     g('r25-f-iva').value='';g('r25-f-prov').value='';
     g('r25-f-tel').value='';g('r25-f-pend').checked=false;
+    if(g('r25-f-mail'))g('r25-f-mail').value='';
     r25Apply();
   };
 
