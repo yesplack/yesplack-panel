@@ -3066,12 +3066,38 @@ async function confirmReset(){
 // ── WHATSAPP TEMPLATE ──
 let wspTemplate = {body:'Hola {NOMBRE}, te contacto desde Yesplack — Centro de la Construcción en Seco. Me gustaría presentarte nuestros productos y servicios. ¿Tenés un momento?'};
 
+// Save current user's WSP preference to Supabase (merged into user_permissions.perms)
+async function _saveUserWspToCloud(body){
+  if(!currentUser)return;
+  try{
+    const {data}=await db.from('user_permissions').select('perms').eq('user_id',currentUser.id).maybeSingle();
+    const existing=(data?.perms)||{};
+    await db.from('user_permissions').upsert(
+      {user_id:currentUser.id, perms:{...existing, wsp_body:body}, updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+  }catch(e){/* silently fail if table doesn't exist yet */}
+}
+
 async function loadWspTemplate(){
+  // 1. Check localStorage first (fastest, works offline)
   try{
     const key='user_wsp_tpl_'+(currentUser?.username||'');
     const saved=localStorage.getItem(key);
     if(saved){const p=JSON.parse(saved);if(p.body){wspTemplate=p;return;}}
   }catch(e){}
+  // 2. Check Supabase user_permissions for per-user saved preference
+  try{
+    const {data}=await db.from('user_permissions').select('perms').eq('user_id',currentUser.id).maybeSingle();
+    if(data?.perms?.wsp_body){
+      wspTemplate={body:data.perms.wsp_body};
+      // Also seed localStorage so next load is instant
+      const key='user_wsp_tpl_'+(currentUser?.username||'');
+      localStorage.setItem(key,JSON.stringify({body:data.perms.wsp_body}));
+      return;
+    }
+  }catch(e){}
+  // 3. Fall back to global default in Supabase
   try{
     const {data}=await db.from('wsp_template').select('*').eq('id','default').maybeSingle();
     if(data&&data.body)wspTemplate={body:data.body};
@@ -3108,7 +3134,8 @@ async function saveWspTemplate(){
     const key='user_wsp_tpl_'+(currentUser?.username||'');
     localStorage.setItem(key,JSON.stringify({body}));
     wspTemplate={body};
-    showToast('✓ Template WSP activo en tu sesión — no afecta a otros usuarios');
+    _saveUserWspToCloud(body); // persist to Supabase silently
+    showToast('✓ Template WSP guardado');
     if(can('manageUsers')){
       const {data:existing}=await db.from('wsp_template').select('id').eq('id','default').maybeSingle();
       if(existing){await db.from('wsp_template').update({body,updated_at:new Date().toISOString()}).eq('id','default');}
@@ -3251,6 +3278,7 @@ async function loadNamedTemplate(id,type){
     const key='user_wsp_tpl_'+(currentUser?.username||'');
     localStorage.setItem(key,JSON.stringify({body}));
     wspTemplate={body};
+    _saveUserWspToCloud(body); // persist to Supabase so it survives logout/tab close
     setActiveLocalTpl(type,id);
     updateWspPreview();
   }
