@@ -681,16 +681,22 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
     <div id="factu-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px;margin-bottom:18px"></div>
     <!-- Charts area -->
     <div id="factu-charts" style="display:none">
+      <!-- Month filter bar -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.8px;color:var(--tx3)">Filtrar por mes:</span>
+        <div id="factu-month-pills" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+        <button onclick="factuSetMonth('all')" id="factu-m-all" style="background:var(--ac);color:#000;border:none;border-radius:20px;padding:3px 12px;font-size:10px;font-family:var(--mo);font-weight:700;cursor:pointer">TODO</button>
+      </div>
       <!-- Podio Top 3 + Bar Chart -->
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;margin-bottom:14px">
-      <!-- Podio -->
-        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px">
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:14px;margin-bottom:14px">
+        <!-- Podio -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;min-width:0">
           <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Top vendedores</div>
           <div style="font-size:13px;font-weight:700;margin-bottom:12px">🏆 Podio Facturación</div>
           <div id="factu-podio"></div>
         </div>
         <!-- Bar Chart -->
-        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px">
+        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;min-width:0">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
             <div>
               <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Acumulado por vendedor</div>
@@ -722,24 +728,24 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       </div>
       <!-- Drill-down panel (hidden until row click) -->
       <div id="factu-drill" style="display:none;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div>
             <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Detalle de operaciones</div>
             <div id="factu-drill-title" style="font-size:15px;font-weight:700"></div>
           </div>
-          <button onclick="document.getElementById('factu-drill').style.display='none'" style="background:var(--sf2);border:1px solid var(--bd);color:var(--tx2);border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer">✕ Cerrar</button>
+          <button onclick="document.getElementById('factu-drill').style.display='none';document.querySelectorAll('#factu-detail-tbody tr').forEach(r=>{r.style.background='';r.style.borderLeft=''})" style="background:var(--sf2);border:1px solid var(--bd);color:var(--tx2);border-radius:5px;padding:4px 12px;font-size:11px;cursor:pointer">✕ Cerrar</button>
         </div>
         <!-- KPI mini row -->
-        <div id="factu-drill-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px"></div>
-        <!-- Two sub-tables side by side -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
+        <div id="factu-drill-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:14px"></div>
+        <!-- Sub-tables: stacked on small screens, side by side on wide -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0">
+          <div style="min-width:0">
             <div style="font-size:11px;font-weight:700;color:#34d399;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(52,211,153,.2)">📄 Facturas</div>
-            <div id="factu-drill-f" style="overflow-x:auto;max-height:320px;overflow-y:auto"></div>
+            <div id="factu-drill-f" style="overflow:auto;max-height:300px;font-size:10px"></div>
           </div>
-          <div>
+          <div style="min-width:0">
             <div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid rgba(96,165,250,.2)">💳 Recibos / Cobranzas</div>
-            <div id="factu-drill-r" style="overflow-x:auto;max-height:320px;overflow-y:auto"></div>
+            <div id="factu-drill-r" style="overflow:auto;max-height:300px;font-size:10px"></div>
           </div>
         </div>
       </div>
@@ -747,7 +753,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
         <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Evolución temporal · acumulado</div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Facturación y Cobranzas día a día</div>
-        <div style="font-size:10px;color:var(--tx3);margin-bottom:14px;font-family:var(--mo)">Pasá el mouse por una barra para ver el valor exacto</div>
+        <div style="font-size:10px;color:var(--tx3);margin-bottom:14px;font-family:var(--mo)">Pasá el mouse por las barras para ver el valor exacto</div>
         <div id="factu-timeline-chart" style="overflow-x:auto"></div>
       </div>
     </div>
@@ -4700,10 +4706,11 @@ function openUserDetail(name){
 // ══════════════════════════════════════════════════════════════════════════════
 // PANEL DE FACTURACIÓN Y COBRANZAS — con persistencia Supabase
 // ══════════════════════════════════════════════════════════════════════════════
-const FACTU_TABLE = 'factu_data'; // tabla en Supabase
-const FACTU_KEY   = 'latest';     // fila única con toda la data
+const FACTU_TABLE = 'factu_data';
+const FACTU_KEY   = 'latest';
 
 const factuState = { f: null, r: null, savedAt: null };
+let factuActiveMonth = 'all'; // current month filter
 
 // ── Drag & Drop ───────────────────────────────────────────────────────────────
 function factuDrag(e, el){ e.preventDefault(); el.classList.add('drag'); }
@@ -4714,7 +4721,13 @@ function factuDrop(e, el, type){
   if(file) factuLoad(file, type);
 }
 
-// ── Load xlsx ─────────────────────────────────────────────────────────────────
+// ── Load xlsx: MERGE by unique key ────────────────────────────────────────────
+function factuRowKey(row, type){
+  // Unique key per row to deduplicate on merge
+  if(type==='f') return String(row.REMNCOMP||'')+'-'+String(row.REMTCOMP||'')+'-'+String(row.REMFEC||'').slice(0,10);
+  return String(row.NRO||'')+'-'+String(row.FEC||'').slice(0,10)+'-'+String(row.IMP||'');
+}
+
 function factuLoad(file, type){
   if(!file || !file.name.endsWith('.xlsx')){ showToast('Solo archivos .xlsx'); return; }
   const reader = new FileReader();
@@ -4722,18 +4735,30 @@ function factuLoad(file, type){
     try{
       const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
-      factuState[type] = rows;
-      // Update upload box UI
+      const newRows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      // Merge with existing: deduplicate by key
+      const existing = factuState[type] || [];
+      const existingKeys = new Set(existing.map(r=>factuRowKey(r,type)));
+      const incoming = newRows.filter(r=>!existingKeys.has(factuRowKey(r,type)));
+      const merged = [...existing, ...incoming];
+
+      const added = incoming.length;
+      const total = merged.length;
+      factuState[type] = merged;
+
+      // Update UI
       const box = document.getElementById('factu-box-'+type);
       box.classList.add('loaded'); box.classList.remove('drag');
       document.getElementById('factu-icon-'+type).textContent = '✅';
       document.getElementById('factu-label-'+type).textContent = file.name;
-      document.getElementById('factu-status-'+type).textContent = rows.length+' registros cargados';
+      document.getElementById('factu-status-'+type).textContent =
+        added>0 ? `+${added} nuevos · total: ${total}` : `Sin cambios · ${total} registros`;
+      if(added===0) showToast('ℹ️ Sin registros nuevos — ya estaban todos cargados');
+      else showToast(`✅ +${added} registros nuevos agregados`);
+
       factuRender();
-      // Save to Supabase if both loaded
-      if(factuState.f && factuState.r) await factuSave();
-      else if(factuState.f || factuState.r) await factuSave();
+      await factuSave();
     } catch(err){ showToast('Error al leer el archivo: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
@@ -4752,16 +4777,12 @@ async function factuSave(){
     const { error } = await db.from(FACTU_TABLE).upsert(payload, {onConflict:'id'});
     if(error){
       console.warn('factuSave error:', error.message);
-      // RLS policy error — guide the user
       if(error.message&&error.message.includes('security policy')){
-        showToast('⚠ RLS activo: ejecutá en Supabase → ALTER TABLE factu_data DISABLE ROW LEVEL SECURITY;','err');
-      } else {
-        showToast('⚠ Error al guardar: '+error.message,'err');
-      }
+        showToast('⚠ RLS activo: ejecutá → ALTER TABLE factu_data DISABLE ROW LEVEL SECURITY;','err');
+      } else { showToast('⚠ Error al guardar: '+error.message,'err'); }
     } else {
       factuState.savedAt = payload.updated_at;
       factuUpdateSavedBadge(payload.updated_by);
-      showToast('✅ Datos guardados en la nube');
     }
   } catch(err){ console.warn('factuSave exception:', err); }
 }
@@ -4784,7 +4805,7 @@ function factuMarkLoaded(type, statusTxt){
   if(!box) return;
   box.classList.add('loaded');
   document.getElementById('factu-icon-'+type).textContent = '☁️';
-  document.getElementById('factu-label-'+type).textContent = type==='f' ? 'Facturas (desde la nube)' : 'Recibos (desde la nube)';
+  document.getElementById('factu-label-'+type).textContent = type==='f' ? 'Facturas (cloud)' : 'Recibos (cloud)';
   document.getElementById('factu-status-'+type).textContent = statusTxt;
 }
 
@@ -4794,10 +4815,40 @@ function factuUpdateSavedBadge(by){
   if(factuState.savedAt){
     const d = new Date(factuState.savedAt);
     const fmt = d.toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-    badge.textContent = 'Última actualización: '+fmt+(by?' · '+by:'');
+    badge.textContent = 'Actualizado: '+fmt+(by?' · '+by:'');
     badge.style.color = 'var(--gr)';
     badge.style.borderColor = 'rgba(34,197,94,.3)';
   }
+}
+
+// ── Month filter ──────────────────────────────────────────────────────────────
+function factuGetRowDate(row, type){
+  let d = type==='f' ? row.REMFEC : row.FEC;
+  if(d instanceof Date) return d.toISOString().slice(0,10);
+  return String(d||'').slice(0,10);
+}
+
+function factuBuildMonthPills(fRows, rRows){
+  const months = new Set();
+  fRows.forEach(r=>{ const d=factuGetRowDate(r,'f'); if(d&&d.length>=7) months.add(d.slice(0,7)); });
+  rRows.forEach(r=>{ const d=factuGetRowDate(r,'r'); if(d&&d.length>=7) months.add(d.slice(0,7)); });
+  const sorted=[...months].sort();
+  const pills=document.getElementById('factu-month-pills');
+  if(!pills) return;
+  pills.innerHTML=sorted.map(m=>{
+    const [y,mo]=m.split('-');
+    const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-AR',{month:'short',year:'2-digit'}).toUpperCase();
+    const isActive=factuActiveMonth===m;
+    return `<button onclick="factuSetMonth('${m}')" id="factu-m-${m}" style="background:${isActive?'var(--ac)':'var(--sf2)'};color:${isActive?'#000':'var(--tx2)'};border:1px solid ${isActive?'var(--ac)':'var(--bd)'};border-radius:20px;padding:3px 10px;font-size:10px;font-family:var(--mo);font-weight:${isActive?'700':'400'};cursor:pointer">${label}</button>`;
+  }).join('');
+  // Style the ALL button
+  const allBtn=document.getElementById('factu-m-all');
+  if(allBtn){ allBtn.style.background=factuActiveMonth==='all'?'var(--ac)':'var(--sf2)'; allBtn.style.color=factuActiveMonth==='all'?'#000':'var(--tx2)'; allBtn.style.border=`1px solid ${factuActiveMonth==='all'?'var(--ac)':'var(--bd)'}`; allBtn.style.fontWeight=factuActiveMonth==='all'?'700':'400'; }
+}
+
+function factuSetMonth(m){
+  factuActiveMonth=m;
+  factuRender();
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
@@ -4817,12 +4868,22 @@ function parseVendName(v){
 
 // ── Main render ───────────────────────────────────────────────────────────────
 function factuRender(){
-  const fRows = factuState.f||[];
-  const rRows = factuState.r||[];
-  if(!fRows.length && !rRows.length) return;
+  const allF = factuState.f||[];
+  const allR = factuState.r||[];
+  if(!allF.length && !allR.length) return;
+
+  // Apply month filter
+  const fRows = factuActiveMonth==='all' ? allF : allF.filter(r=>{ const d=factuGetRowDate(r,'f'); return d&&d.slice(0,7)===factuActiveMonth; });
+  const rRows = factuActiveMonth==='all' ? allR : allR.filter(r=>{ const d=factuGetRowDate(r,'r'); return d&&d.slice(0,7)===factuActiveMonth; });
+
+  // Build month pills
+  factuBuildMonthPills(allF, allR);
 
   document.getElementById('factu-empty').style.display = 'none';
   document.getElementById('factu-charts').style.display = 'block';
+  // Close drill panel when filter changes
+  document.getElementById('factu-drill').style.display='none';
+  document.querySelectorAll('#factu-detail-tbody tr').forEach(r=>{r.style.background='';r.style.borderLeft='';});
 
   // ── Aggregate ────────────────────────────────────────────────────────────
   const fByVend={}, rByVend={}, fByDay={}, rByDay={};
@@ -4853,26 +4914,32 @@ function factuRender(){
   const allVends = [...new Set([...Object.keys(fByVend),...Object.keys(rByVend)])];
   allVends.sort((a,b)=>(fByVend[b]||0)-(fByVend[a]||0));
 
-  // Date range badge
+  // Date range badge — shows filtered period
   const allDays = [...new Set([...Object.keys(fByDay),...Object.keys(rByDay)])].sort();
-  if(allDays.length && !factuState.savedAt){
+  const badge = document.getElementById('factu-period-badge');
+  if(allDays.length && badge && !factuState.savedAt){
     const fmt=d=>new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-    const badge = document.getElementById('factu-period-badge');
     badge.textContent = fmt(allDays[0])+' → '+fmt(allDays[allDays.length-1]);
+  } else if(badge && factuActiveMonth!=='all'){
+    const [y,mo]=factuActiveMonth.split('-');
+    const label=new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    const prev=badge.textContent;
+    if(!prev.includes('Actualizado')) badge.textContent='Período: '+label;
   }
 
   // ── KPI Cards (Xbox-style) ────────────────────────────────────────────────
   const diff = totalF-totalR;
   const pct  = totalF>0?Math.round(totalR/totalF*100):0;
   const pctCol = pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171';
+  const periodoLabel = factuActiveMonth==='all' ? 'total acumulado' : (() => { const [y,mo]=factuActiveMonth.split('-'); return new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'}); })();
 
   document.getElementById('factu-kpis').innerHTML = [
-    {icon:'📄',label:'Total Facturado',  val:factuFmt(totalF), sub:Object.keys(fByVend).length+' vendedores', col:'#34d399', bg:'rgba(52,211,153,.08)', border:'rgba(52,211,153,.2)'},
-    {icon:'💳',label:'Total Cobrado',    val:factuFmt(totalR), sub:Object.keys(rByVend).length+' vendedores', col:'#60a5fa', bg:'rgba(96,165,250,.08)', border:'rgba(96,165,250,.2)'},
+    {icon:'📄',label:'Total Facturado',  val:factuFmt(totalF), sub:Object.keys(fByVend).length+' vendedores · '+periodoLabel, col:'#34d399', bg:'rgba(52,211,153,.08)', border:'rgba(52,211,153,.2)'},
+    {icon:'💳',label:'Total Cobrado',    val:factuFmt(totalR), sub:Object.keys(rByVend).length+' vendedores · '+periodoLabel, col:'#60a5fa', bg:'rgba(96,165,250,.08)', border:'rgba(96,165,250,.2)'},
     {icon:'⚡',label:'Diferencia',       val:factuFmt(Math.abs(diff)), sub:diff>=0?'Pendiente de cobro':'Cobrado > Facturado', col:diff>=0?'#fbbf24':'#f87171', bg:diff>=0?'rgba(234,179,8,.08)':'rgba(239,68,68,.08)', border:diff>=0?'rgba(234,179,8,.2)':'rgba(239,68,68,.2)'},
-    {icon:'📊',label:'% de Cobranza',    val:pct+'%',          sub:'sobre total facturado',   col:pctCol, bg:'rgba(168,85,247,.08)', border:'rgba(168,85,247,.2)'},
-    {icon:'🗂',label:'Fact. importadas', val:fRows.length.toLocaleString('es'), sub:'registros', col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
-    {icon:'🗂',label:'Cobr. importadas', val:rRows.length.toLocaleString('es'), sub:'registros', col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
+    {icon:'📊',label:'% de Cobranza',    val:pct+'%',          sub:'sobre total facturado', col:pctCol, bg:'rgba(168,85,247,.08)', border:'rgba(168,85,247,.2)'},
+    {icon:'🗂',label:'Facturas período', val:fRows.length.toLocaleString('es'), sub:factuActiveMonth==='all'?'total en base':'en '+periodoLabel, col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
+    {icon:'🗂',label:'Cobr. período',    val:rRows.length.toLocaleString('es'), sub:factuActiveMonth==='all'?'total en base':'en '+periodoLabel, col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
   ].map(k=>`
     <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:16px 18px;position:relative;overflow:hidden">
       <div style="position:absolute;right:14px;top:12px;font-size:22px;opacity:.25">${k.icon}</div>
@@ -4954,7 +5021,7 @@ function factuRender(){
   if(podioEl) podioEl.innerHTML = podioHtml;
 
   // ── Detail Table ──────────────────────────────────────────────────────────
-  // Store per-vendor raw rows for drill-down
+  // Store ALL rows (unfiltered) per vendor for drill-down
   window._factuByVend = {};
   window._recibByVend = {};
   (factuState.f||[]).forEach(row=>{ const v=parseVendName(row.VENDEDOR); if(!window._factuByVend[v]) window._factuByVend[v]=[]; window._factuByVend[v].push(row); });
@@ -5045,8 +5112,12 @@ function factuRender(){
 
 // ── Drill-down: open vendor detail ────────────────────────────────────────────
 function factuDrillOpen(vend){
-  const fRows = (window._factuByVend||{})[vend]||[];
-  const rRows = (window._recibByVend||{})[vend]||[];
+  const allFVend = (window._factuByVend||{})[vend]||[];
+  const allRVend = (window._recibByVend||{})[vend]||[];
+
+  // Apply month filter to drill rows too
+  const fRows = factuActiveMonth==='all' ? allFVend : allFVend.filter(r=>{ const d=factuGetRowDate(r,'f'); return d&&d.slice(0,7)===factuActiveMonth; });
+  const rRows = factuActiveMonth==='all' ? allRVend : allRVend.filter(r=>{ const d=factuGetRowDate(r,'r'); return d&&d.slice(0,7)===factuActiveMonth; });
   const totalF = fRows.reduce((s,r)=>s+(parseFloat(r.LRETOT)||0),0);
   const totalR = rRows.reduce((s,r)=>s+(parseFloat(r.IMP)||0),0);
   const diff   = totalF-totalR;
@@ -5060,6 +5131,9 @@ function factuDrillOpen(vend){
   });
 
   document.getElementById('factu-drill-title').textContent = '👤 '+vend;
+  // Show period in subtitle
+  const drillSub = factuActiveMonth==='all' ? 'todos los períodos' : (() => { const [y,mo]=factuActiveMonth.split('-'); return new Date(parseInt(y),parseInt(mo)-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'}); })();
+  document.querySelector('#factu-drill [style*="letter-spacing:1px"]').textContent = 'Detalle · '+drillSub;
 
   // Mini KPIs
   document.getElementById('factu-drill-kpis').innerHTML=[
