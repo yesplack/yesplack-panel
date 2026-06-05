@@ -1702,7 +1702,7 @@ function switchView(v,btn){
     document.getElementById('factu-maestro-tools').style.display=isMaestro?'block':'none';
     document.getElementById('factu-readonly-notice').style.display=isMaestro?'none':'block';
     const hasData=factuState.f||factuState.r;
-    factuLog('Tab factu abierto. rol='+currentRole+' admin='+isAdm+' _loaded='+window._factuLoaded+' hasData='+!!hasData);
+    factuLog('Tab factu abierto. rol='+currentRole+' maestro='+isMaestro+' _loaded='+window._factuLoaded+' hasData='+!!hasData);
     if(!window._factuLoaded||!hasData){
       window._factuLoaded=true;
       if(typeof factuLoadFromDB==='function'){ factuLog('Llamando factuLoadFromDB()...'); factuLoadFromDB(); }
