@@ -1266,6 +1266,10 @@ function doLogout(){
   document.getElementById('l-btn').disabled=false;document.getElementById('l-btn').textContent='Entrar';
   document.getElementById('admin-tab').style.display='none';document.getElementById('tpl-tab').style.display='none';document.getElementById('wsp-tab').style.display='none';document.getElementById('newcli-tab').style.display='none';
   document.getElementById('factu-tab-btn').style.display='none';
+  // Reset factu state so it reloads fresh on next login
+  window._factuLoaded=false;
+  if(typeof factuState!=='undefined'){ factuState.f=null; factuState.r=null; factuState.savedAt=null; }
+  if(typeof factuActiveMonth!=='undefined') factuActiveMonth='all';
   document.getElementById('user-btn').textContent='👤 —';
   // Switch to lista tab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
@@ -1671,7 +1675,12 @@ function switchView(v,btn){
     const isAdm=(currentRole==='admin'||currentRole==='maestro');
     document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
     document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
-    if(!window._factuLoaded){ window._factuLoaded=true; factuLoadFromDB(); }
+    // Load from DB: on first open, OR if state is empty (e.g. after logout/login)
+    const hasData = factuState.f||factuState.r;
+    if(!window._factuLoaded || !hasData){
+      window._factuLoaded=true;
+      factuLoadFromDB();
+    }
   }
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -4730,12 +4739,25 @@ function factuRowKey(row, type){
 
 function factuLoad(file, type){
   if(!file || !file.name.endsWith('.xlsx')){ showToast('Solo archivos .xlsx'); return; }
+  // Show loading state immediately
+  const icon = document.getElementById('factu-icon-'+type);
+  const status = document.getElementById('factu-status-'+type);
+  if(icon) icon.textContent='⏳';
+  if(status) status.textContent='Leyendo archivo…';
+
   const reader = new FileReader();
   reader.onload = async function(e){
     try{
+      // Wait for XLSX if not ready
+      let xTries=0;
+      while(typeof XLSX==='undefined' && xTries<10){ await new Promise(r=>setTimeout(r,300)); xTries++; }
+      if(typeof XLSX==='undefined'){ showToast('❌ Librería XLSX no disponible, recargá la página'); return; }
+
       const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
       const ws = wb.Sheets[wb.SheetNames[0]];
       const newRows = XLSX.utils.sheet_to_json(ws, {defval:''});
+
+      if(!newRows.length){ showToast('⚠ El archivo no tiene filas'); return; }
 
       // Merge with existing: deduplicate by key
       const existing = factuState[type] || [];
@@ -4749,17 +4771,23 @@ function factuLoad(file, type){
 
       // Update UI
       const box = document.getElementById('factu-box-'+type);
-      box.classList.add('loaded'); box.classList.remove('drag');
-      document.getElementById('factu-icon-'+type).textContent = '✅';
-      document.getElementById('factu-label-'+type).textContent = file.name;
-      document.getElementById('factu-status-'+type).textContent =
-        added>0 ? `+${added} nuevos · total: ${total}` : `Sin cambios · ${total} registros`;
+      if(box){ box.classList.add('loaded'); box.classList.remove('drag'); }
+      if(icon) icon.textContent='✅';
+      const lbl = document.getElementById('factu-label-'+type);
+      if(lbl) lbl.textContent = file.name;
+      if(status) status.textContent = added>0 ? `+${added} nuevos · total: ${total}` : `Sin cambios · ${total} registros`;
+
       if(added===0) showToast('ℹ️ Sin registros nuevos — ya estaban todos cargados');
       else showToast(`✅ +${added} registros nuevos agregados`);
 
       factuRender();
       await factuSave();
-    } catch(err){ showToast('Error al leer el archivo: '+err.message); }
+    } catch(err){
+      if(icon) icon.textContent='❌';
+      if(status) status.textContent='Error al leer';
+      showToast('Error al leer el archivo: '+err.message);
+      console.error('factuLoad error:', err);
+    }
   };
   reader.readAsArrayBuffer(file);
 }
@@ -4789,24 +4817,41 @@ async function factuSave(){
 
 // ── Load from Supabase ────────────────────────────────────────────────────────
 async function factuLoadFromDB(){
+  // Wait for db to be ready (up to 5s)
+  let tries=0;
+  while(typeof db==='undefined' && tries<10){ await new Promise(r=>setTimeout(r,500)); tries++; }
+  if(typeof db==='undefined'){ console.warn('factuLoadFromDB: db not ready'); return; }
   try{
     const { data, error } = await db.from(FACTU_TABLE).select('*').eq('id', FACTU_KEY).maybeSingle();
-    if(error || !data) return;
-    if(data.facturas){ factuState.f = JSON.parse(data.facturas); factuMarkLoaded('f', factuState.f.length+' registros (cloud)'); }
-    if(data.recibos){  factuState.r = JSON.parse(data.recibos);  factuMarkLoaded('r', factuState.r.length+' registros (cloud)'); }
+    if(error){ console.warn('factuLoadFromDB error:', error.message); return; }
+    if(!data){ console.log('factuLoadFromDB: no data yet'); return; }
+    if(data.facturas){
+      try{ factuState.f = JSON.parse(data.facturas); }catch(e){ console.warn('parse facturas error',e); }
+      factuMarkLoaded('f', (factuState.f||[]).length+' registros (cloud)');
+    }
+    if(data.recibos){
+      try{ factuState.r = JSON.parse(data.recibos); }catch(e){ console.warn('parse recibos error',e); }
+      factuMarkLoaded('r', (factuState.r||[]).length+' registros (cloud)');
+    }
     factuState.savedAt = data.updated_at;
     factuUpdateSavedBadge(data.updated_by);
-    if(factuState.f || factuState.r) factuRender();
-  } catch(err){ console.warn('factuLoadFromDB error:', err); }
+    if(factuState.f || factuState.r){
+      // Small delay to ensure DOM is painted
+      setTimeout(()=>factuRender(), 80);
+    }
+  } catch(err){ console.warn('factuLoadFromDB exception:', err); }
 }
 
 function factuMarkLoaded(type, statusTxt){
-  const box = document.getElementById('factu-box-'+type);
-  if(!box) return;
-  box.classList.add('loaded');
-  document.getElementById('factu-icon-'+type).textContent = '☁️';
-  document.getElementById('factu-label-'+type).textContent = type==='f' ? 'Facturas (cloud)' : 'Recibos (cloud)';
-  document.getElementById('factu-status-'+type).textContent = statusTxt;
+  // Upload zone may be hidden for non-admins — update safely
+  const icon   = document.getElementById('factu-icon-'+type);
+  const label  = document.getElementById('factu-label-'+type);
+  const status = document.getElementById('factu-status-'+type);
+  const box    = document.getElementById('factu-box-'+type);
+  if(box)    box.classList.add('loaded');
+  if(icon)   icon.textContent   = '☁️';
+  if(label)  label.textContent  = type==='f' ? 'Facturas (cloud)' : 'Recibos (cloud)';
+  if(status) status.textContent = statusTxt;
 }
 
 function factuUpdateSavedBadge(by){
