@@ -654,39 +654,48 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       </div>
       <div id="factu-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Sin datos cargados</div>
     </div>
-    <!-- Debug console - colapsable -->
-    <div id="factu-debug" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;margin-bottom:14px;overflow:hidden">
-      <div onclick="(function(){var b=document.getElementById('factu-debug-body');var a=document.getElementById('factu-debug-arrow');var open=b.style.display!=='none';b.style.display=open?'none':'block';a.textContent=open?'▶':'▼'})()" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;user-select:none">
-        <span style="color:#58a6ff;font-weight:700;font-family:monospace;font-size:11px">🔍 Debug Console</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button onclick="event.stopPropagation();document.getElementById('factu-debug-log').innerHTML=''" style="background:none;border:1px solid #30363d;color:#8b949e;border-radius:3px;padding:1px 8px;font-size:10px;cursor:pointer;font-family:monospace">limpiar</button>
-          <span id="factu-debug-arrow" style="color:#58a6ff;font-size:10px;font-family:monospace">▼</span>
+    <!-- Debug console + Uploaders — solo MAESTRO, colapsables -->
+    <div id="factu-maestro-tools" style="display:none;margin-bottom:14px">
+      <!-- Debug console -->
+      <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;margin-bottom:10px;overflow:hidden">
+        <div onclick="(function(){var b=document.getElementById('factu-debug-body');var a=document.getElementById('factu-debug-arrow');var open=b.style.display!=='none';b.style.display=open?'none':'block';a.textContent=open?'▶':'▼'})()" style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;cursor:pointer;user-select:none">
+          <span style="color:#58a6ff;font-weight:700;font-family:monospace;font-size:11px">🔍 Debug Console</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button onclick="event.stopPropagation();document.getElementById('factu-debug-log').innerHTML=''" style="background:none;border:1px solid #30363d;color:#8b949e;border-radius:3px;padding:1px 8px;font-size:10px;cursor:pointer;font-family:monospace">limpiar</button>
+            <span id="factu-debug-arrow" style="color:#58a6ff;font-size:10px;font-family:monospace">▶</span>
+          </div>
+        </div>
+        <div id="factu-debug-body" style="display:none;padding:0 12px 10px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto">
+          <div id="factu-debug-log" style="color:#8b949e;line-height:1.6"></div>
         </div>
       </div>
-      <div id="factu-debug-body" style="display:none;padding:0 12px 10px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto">
-        <div id="factu-debug-log" style="color:#8b949e;line-height:1.6"></div>
+      <!-- Upload zone collapsible -->
+      <div style="background:var(--sf);border:1px solid var(--bd);border-radius:8px;overflow:hidden">
+        <div onclick="(function(){var b=document.getElementById('factu-upload-body');var a=document.getElementById('factu-upload-arrow');var open=b.style.display!=='none';b.style.display=open?'none':'block';a.textContent=open?'▶':'▼'})()" style="display:flex;justify-content:space-between;align-items:center;padding:8px 14px;cursor:pointer;user-select:none">
+          <span style="font-size:11px;font-weight:700;color:var(--tx2)">📂 Importar datos (xlsx)</span>
+          <span id="factu-upload-arrow" style="color:var(--tx3);font-size:10px;font-family:var(--mo)">▶</span>
+        </div>
+        <div id="factu-upload-body" style="display:none;padding:12px 14px 14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="factu-upload-box" id="factu-box-f" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'f')" onclick="document.getElementById('factu-inp-f').click()">
+              <input type="file" id="factu-inp-f" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'f')">
+              <div id="factu-icon-f" style="font-size:28px;margin-bottom:6px">📄</div>
+              <div id="factu-label-f" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Facturas</div>
+              <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+              <div id="factu-status-f" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+            </div>
+            <div class="factu-upload-box" id="factu-box-r" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'r')" onclick="document.getElementById('factu-inp-r').click()">
+              <input type="file" id="factu-inp-r" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'r')">
+              <div id="factu-icon-r" style="font-size:28px;margin-bottom:6px">💳</div>
+              <div id="factu-label-r" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Recibos (Cobranzas)</div>
+              <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+              <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <!-- Upload zone — solo admin/maestro -->
-    <div id="factu-upload-zone" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-        <div class="factu-upload-box" id="factu-box-f" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'f')" onclick="document.getElementById('factu-inp-f').click()">
-          <input type="file" id="factu-inp-f" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'f')">
-          <div id="factu-icon-f" style="font-size:28px;margin-bottom:6px">📄</div>
-          <div id="factu-label-f" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Facturas</div>
-          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
-          <div id="factu-status-f" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
-        </div>
-        <div class="factu-upload-box" id="factu-box-r" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'r')" onclick="document.getElementById('factu-inp-r').click()">
-          <input type="file" id="factu-inp-r" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'r')">
-          <div id="factu-icon-r" style="font-size:28px;margin-bottom:6px">💳</div>
-          <div id="factu-label-r" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Recibos (Cobranzas)</div>
-          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
-          <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
-        </div>
-      </div>
-    </div>
-    <!-- Aviso para vendedores (solo lectura) -->
+    <!-- Aviso para no-maestro (solo lectura) -->
     <div id="factu-readonly-notice" style="display:none;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:12px 16px;margin-bottom:18px;font-size:11px;color:#93c5fd;font-family:var(--mo)">
       📊 Los datos son cargados por el administrador. Cuando haya información disponible, la verás acá.
     </div>
@@ -1689,9 +1698,9 @@ function switchView(v,btn){
   }
   if(v==='admin'&&can('manageUsers'))loadUsers();
   if(v==='factu'){
-    const isAdm=(currentRole==='admin'||currentRole==='maestro');
-    document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
-    document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
+    const isMaestro=(currentRole==='maestro');
+    document.getElementById('factu-maestro-tools').style.display=isMaestro?'block':'none';
+    document.getElementById('factu-readonly-notice').style.display=isMaestro?'none':'block';
     const hasData=factuState.f||factuState.r;
     factuLog('Tab factu abierto. rol='+currentRole+' admin='+isAdm+' _loaded='+window._factuLoaded+' hasData='+!!hasData);
     if(!window._factuLoaded||!hasData){
