@@ -692,6 +692,11 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
               <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
             </div>
           </div>
+          <!-- Reset / limpieza de datos -->
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+            <div style="font-size:10px;color:var(--tx3);font-family:var(--mo)">⚠ Borrar todos los datos acumulados y empezar de cero</div>
+            <button onclick="factuReset()" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:6px;padding:5px 16px;font-size:11px;font-family:var(--mo);font-weight:600;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,.25)'" onmouseout="this.style.background='rgba(239,68,68,.12)'">🗑 Limpiar todos los datos</button>
+          </div>
         </div>
       </div>
     </div>
@@ -4754,10 +4759,33 @@ function factuDrop(e, el, type){
 }
 
 // ── Load xlsx: MERGE by unique key ────────────────────────────────────────────
+function factuNormDate(d){
+  // Normalize any date format to YYYY-MM-DD string
+  if(!d) return '';
+  if(d instanceof Date) return d.toISOString().slice(0,10);
+  const s=String(d).trim();
+  // Already ISO: 2026-04-01
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  // Excel serial number
+  if(/^\d{5}$/.test(s)){ const dt=new Date(Math.round((parseFloat(s)-25569)*86400*1000)); return dt.toISOString().slice(0,10); }
+  // Try parsing anything else
+  const dt=new Date(s);
+  return isNaN(dt)?s.slice(0,10):dt.toISOString().slice(0,10);
+}
+
 function factuRowKey(row, type){
-  // Unique key per row to deduplicate on merge
-  if(type==='f') return String(row.REMNCOMP||'')+'-'+String(row.REMTCOMP||'')+'-'+String(row.REMFEC||'').slice(0,10);
-  return String(row.NRO||'')+'-'+String(row.FEC||'').slice(0,10)+'-'+String(row.IMP||'');
+  if(type==='f'){
+    // Primary key: N° comprobante + tipo. If missing, fallback to comp+date+amount
+    const ncomp=String(row.REMNCOMP||'').trim();
+    const tcomp=String(row.REMTCOMP||'').trim();
+    if(ncomp) return 'F:'+tcomp+'-'+ncomp;
+    // Fallback: vendedor+fecha+importe
+    return 'F:'+String(row.VENDEDOR||'')+'-'+factuNormDate(row.REMFEC)+'-'+String(row.LRETOT||'');
+  }
+  // Recibos: N° recibo es único
+  const nro=String(row.NRO||'').trim();
+  if(nro) return 'R:'+nro;
+  return 'R:'+String(row.VENDEDOR||'')+'-'+factuNormDate(row.FEC)+'-'+String(row.IMP||'');
 }
 
 function factuLoad(file, type){
@@ -4838,7 +4866,42 @@ async function factuSave(){
   } catch(err){ console.warn('factuSave exception:', err); }
 }
 
-// ── Load from Supabase ────────────────────────────────────────────────────────
+// ── Reset: borrar todos los datos acumulados ──────────────────────────────────
+async function factuReset(){
+  if(!confirm('⚠ ¿Seguro que querés borrar TODOS los datos de facturación y cobranzas?\nEsta acción no se puede deshacer.')) return;
+  factuLog('Iniciando limpieza de datos...','warn');
+  try{
+    const { error } = await db.from(FACTU_TABLE).delete().eq('id', FACTU_KEY);
+    if(error){ factuLog('❌ Error al borrar: '+error.message,'err'); showToast('❌ Error al borrar: '+error.message); return; }
+    // Reset memory state
+    factuState.f=null; factuState.r=null; factuState.savedAt=null;
+    factuActiveMonth='all';
+    window._factuLoaded=false;
+    // Reset upload boxes UI
+    ['f','r'].forEach(t=>{
+      const box=document.getElementById('factu-box-'+t);
+      if(box) box.classList.remove('loaded');
+      const icon=document.getElementById('factu-icon-'+t);
+      if(icon) icon.textContent=t==='f'?'📄':'💳';
+      const lbl=document.getElementById('factu-label-'+t);
+      if(lbl) lbl.textContent=t==='f'?'Importar Facturas':'Importar Recibos (Cobranzas)';
+      const st=document.getElementById('factu-status-'+t);
+      if(st) st.textContent='';
+    });
+    // Reset input files
+    const inpF=document.getElementById('factu-inp-f'); if(inpF) inpF.value='';
+    const inpR=document.getElementById('factu-inp-r'); if(inpR) inpR.value='';
+    // Hide charts, show empty state
+    document.getElementById('factu-charts').style.display='none';
+    document.getElementById('factu-empty').style.display='block';
+    document.getElementById('factu-kpis').innerHTML='';
+    document.getElementById('factu-month-pills').innerHTML='';
+    const badge=document.getElementById('factu-period-badge');
+    if(badge){ badge.textContent='Sin datos cargados'; badge.style.color=''; badge.style.borderColor=''; }
+    factuLog('✅ Datos borrados correctamente','ok');
+    showToast('✅ Datos borrados — podés volver a cargar los xlsx');
+  } catch(err){ factuLog('❌ Excepción: '+err.message,'err'); console.error(err); }
+}
 // ── Debug logger ──────────────────────────────────────────────────────────────
 function factuLog(msg, type='info'){
   const colors={info:'#8b949e',ok:'#3fb950',warn:'#d29922',err:'#f85149'};
