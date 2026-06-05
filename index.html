@@ -754,7 +754,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
         <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Evolución temporal · acumulado</div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Facturación y Cobranzas día a día</div>
         <div style="font-size:10px;color:var(--tx3);margin-bottom:14px;font-family:var(--mo)">Pasá el mouse por las barras para ver el valor exacto</div>
-        <div id="factu-timeline-chart" style="overflow-x:auto"></div>
+        <div id="factu-timeline-chart" style="width:100%"></div>
       </div>
     </div>
     <div id="factu-empty" style="text-align:center;padding:60px;color:var(--tx3)">
@@ -5043,70 +5043,86 @@ function factuRender(){
     </tr>`;
   }).join('');
 
-  // ── Timeline: dual-line chart (Fact vs Cobr acumulado) ────────────────────
+  // ── Timeline: dual-line chart full width ──────────────────────────────────
   const sortedDays = allDays.length?allDays:[...new Set([...Object.keys(fByDay),...Object.keys(rByDay)])].sort();
   if(sortedDays.length){
     let cumF=0, cumR=0;
     const points = sortedDays.map(d=>{ cumF+=fByDay[d]||0; cumR+=rByDay[d]||0; return {d,cumF,cumR,df:fByDay[d]||0,dr:rByDay[d]||0}; });
     const maxCum = Math.max(1,...points.map(p=>Math.max(p.cumF,p.cumR)));
-    // Chart dimensions
-    const CH=140, CW=Math.max(points.length*14, 600);
-    const PAD_L=70, PAD_B=28, PAD_T=10, PAD_R=16;
-    const plotW=CW-PAD_L-PAD_R, plotH=CH-PAD_B-PAD_T;
-    const bW=Math.max(4,Math.floor(plotW/points.length)-2);
 
-    // Y-axis ticks
-    const yTicks=5;
+    // Fixed coordinate space — SVG scales via viewBox
+    const VW=1200, VH=260;
+    const PAD_L=82, PAD_B=36, PAD_T=16, PAD_R=20;
+    const plotW=VW-PAD_L-PAD_R, plotH=VH-PAD_B-PAD_T;
+    const bW=Math.max(3,Math.floor(plotW/points.length)-1);
+
+    // Y-axis ticks (6 levels)
+    const yTicks=6;
     const yGrid=[];
-    for(let i=0;i<=yTicks;i++) yGrid.push({v:maxCum*i/yTicks,y:PAD_T+plotH-(plotH*i/yTicks)});
+    for(let i=0;i<=yTicks;i++) yGrid.push({v:maxCum*i/yTicks, y:PAD_T+plotH-(plotH*i/yTicks)});
 
-    // Bar + line paths
+    // Bar positions
     const bars=points.map((p,i)=>{
       const x=PAD_L+Math.round(i*plotW/points.length);
       const hF=Math.round(p.cumF/maxCum*plotH);
       const hR=Math.round(p.cumR/maxCum*plotH);
-      const yF=PAD_T+plotH-hF, yR=PAD_T+plotH-hR;
-      return {x,yF,yR,hF,hR,p};
+      return {x, yF:PAD_T+plotH-hF, yR:PAD_T+plotH-hR, hF, hR, p};
     });
 
-    // SVG paths for cumulative lines
+    // Line paths
     const lineF=bars.map((b,i)=>`${i===0?'M':'L'}${b.x+Math.floor(bW/2)},${b.yF}`).join(' ');
     const lineR=bars.map((b,i)=>`${i===0?'M':'L'}${b.x+Math.floor(bW/2)},${b.yR}`).join(' ');
 
-    // X-axis labels (evenly spaced)
-    const xStep=Math.ceil(points.length/8);
-    const xLabels=bars.filter((_,i)=>i%xStep===0||i===bars.length-1).map(b=>{
+    // X labels — show ~10 evenly spaced + last
+    const xStep=Math.max(1,Math.ceil(points.length/10));
+    const xLabels=bars.map((b,i)=>{
+      if(i%xStep!==0 && i!==bars.length-1) return '';
       const lbl=new Date(b.p.d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
-      return `<text x="${b.x+Math.floor(bW/2)}" y="${CH-6}" text-anchor="middle" font-size="9" fill="var(--tx3)" font-family="var(--mo)">${lbl}</text>`;
+      return `<text x="${b.x+Math.floor(bW/2)}" y="${VH-8}" text-anchor="middle" font-size="11" fill="var(--tx3)" font-family="var(--mo)">${lbl}</text>`;
     }).join('');
 
-    // Y-axis labels
-    const yLabels=yGrid.map(g=>`<text x="${PAD_L-6}" y="${g.y+4}" text-anchor="end" font-size="9" fill="var(--tx3)" font-family="var(--mo)">${factuFmt(g.v)}</text><line x1="${PAD_L}" y1="${g.y}" x2="${CW-PAD_R}" y2="${g.y}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="3,3"/>`).join('');
+    // Y labels + grid lines
+    const yLabels=yGrid.map(g=>`
+      <text x="${PAD_L-8}" y="${g.y+4}" text-anchor="end" font-size="11" fill="var(--tx3)" font-family="var(--mo)">${factuFmt(g.v)}</text>
+      <line x1="${PAD_L}" y1="${g.y}" x2="${VW-PAD_R}" y2="${g.y}" stroke="var(--bd)" stroke-width="1" stroke-dasharray="4,4"/>`).join('');
 
-    // Tooltip data attribute per bar
+    // Bars + hover zones
     const barsHtmlSvg=bars.map(b=>{
-      const tip=`${b.p.d} | Fact: ${factuFmt(b.p.cumF)} | Cobr: ${factuFmt(b.p.cumR)} | Día: +${factuFmt(b.p.df)}`;
-      return `<rect x="${b.x}" y="${PAD_T}" width="${bW}" height="${plotH}" fill="transparent" style="cursor:pointer"
-        onmouseover="document.getElementById('factu-tt').style.display='block';document.getElementById('factu-tt').innerHTML='<b>${b.p.d}</b><br>📄 Fact: ${factuFmt(b.p.cumF)}<br>💳 Cobr: ${factuFmt(b.p.cumR)}<br>📅 Día: +${factuFmt(b.p.df)}'"
+      const fFmt=factuFmt(b.p.cumF).replace(/'/g,'&apos;');
+      const rFmt=factuFmt(b.p.cumR).replace(/'/g,'&apos;');
+      const dFmt=factuFmt(b.p.df).replace(/'/g,'&apos;');
+      return `<rect x="${b.x}" y="${PAD_T}" width="${bW+1}" height="${plotH}" fill="transparent" style="cursor:crosshair"
+        onmouseover="document.getElementById('factu-tt').style.display='block';document.getElementById('factu-tt').innerHTML='<b style=&quot;color:var(--tx)&quot;>${b.p.d}</b><br>📄 <span style=&quot;color:#34d399&quot;>${fFmt}</span><br>💳 <span style=&quot;color:#60a5fa&quot;>${rFmt}</span><br>📅 día: +${dFmt}'"
         onmouseout="document.getElementById('factu-tt').style.display='none'"/>
-      <rect x="${b.x}" y="${b.yF}" width="${bW}" height="${b.hF}" fill="#34d399" opacity=".35" rx="1"/>`;
+      <rect x="${b.x}" y="${b.yF}" width="${bW}" height="${b.hF}" fill="#34d399" opacity=".3" rx="1"/>`;
     }).join('');
+
+    // Area fill under facturacion line
+    const areaF=`M${PAD_L+Math.floor(bW/2)},${PAD_T+plotH} `+bars.map((b,i)=>`${i===0?'L':'L'}${b.x+Math.floor(bW/2)},${b.yF}`).join(' ')+` L${bars[bars.length-1].x+Math.floor(bW/2)},${PAD_T+plotH} Z`;
 
     document.getElementById('factu-timeline-chart').innerHTML=`
-      <div style="position:relative">
-        <svg width="${CW}" height="${CH}" xmlns="http://www.w3.org/2000/svg" style="display:block">
+      <div style="position:relative;width:100%">
+        <svg viewBox="0 0 ${VW} ${VH}" width="100%" style="display:block;overflow:visible" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="gradF" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#34d399" stop-opacity=".18"/>
+              <stop offset="100%" stop-color="#34d399" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
           ${yLabels}
+          <path d="${areaF}" fill="url(#gradF)"/>
           ${barsHtmlSvg}
-          <path d="${lineR}" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linejoin="round" opacity=".9"/>
-          <path d="${lineF}" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="${lineR}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity=".9"/>
+          <path d="${lineF}" fill="none" stroke="#34d399" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
           ${xLabels}
         </svg>
-        <div id="factu-tt" style="display:none;position:absolute;top:8px;right:8px;background:var(--sf3);border:1px solid var(--bd);border-radius:7px;padding:8px 12px;font-size:11px;color:var(--tx);font-family:var(--mo);line-height:1.7;pointer-events:none;white-space:nowrap"></div>
+        <div id="factu-tt" style="display:none;position:absolute;top:12px;right:12px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--tx);font-family:var(--mo);line-height:1.8;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.4)"></div>
       </div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:10px;font-family:var(--mo);color:var(--tx3)">
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#34d399;display:inline-block;border-radius:2px"></span>Facturación acumulada: <strong style="color:#34d399">${factuFmt(points[points.length-1].cumF)}</strong></span>
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#60a5fa;display:inline-block;border-radius:2px"></span>Cobranzas acumuladas: <strong style="color:#60a5fa">${factuFmt(points[points.length-1].cumR)}</strong></span>
+      <div style="display:flex;gap:20px;margin-top:10px;font-size:11px;font-family:var(--mo);color:var(--tx3);flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:3px;background:#34d399;display:inline-block;border-radius:2px"></span>Facturación acumulada: <strong style="color:#34d399">${factuFmt(points[points.length-1].cumF)}</strong></span>
+        <span style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:3px;background:#60a5fa;display:inline-block;border-radius:2px"></span>Cobranzas acumuladas: <strong style="color:#60a5fa">${factuFmt(points[points.length-1].cumR)}</strong></span>
       </div>`;
+  }
   }
 }
 
