@@ -681,21 +681,30 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
     <div id="factu-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px;margin-bottom:18px"></div>
     <!-- Charts area -->
     <div id="factu-charts" style="display:none">
-      <!-- Bar chart: Facturacion por vendedor -->
-      <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
-          <div>
-            <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Acumulado por vendedor</div>
-            <div style="font-size:14px;font-weight:700">Facturación vs. Cobranzas</div>
-          </div>
-          <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mo)">
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#34d399;display:inline-block"></span>Facturación</span>
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block"></span>Cobranzas</span>
-          </div>
+      <!-- Podio Top 3 + Bar Chart -->
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;margin-bottom:14px">
+        <!-- Podio -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px">
+          <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Top vendedores</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:14px">🏆 Podio</div>
+          <div id="factu-podio"></div>
         </div>
-        <div id="factu-bar-chart" style="overflow-x:auto;padding-bottom:4px"></div>
+        <!-- Bar Chart -->
+        <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Acumulado por vendedor</div>
+              <div style="font-size:14px;font-weight:700">Facturación vs. Cobranzas</div>
+            </div>
+            <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mo)">
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#34d399;display:inline-block"></span>Facturación</span>
+              <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block"></span>Cobranzas</span>
+            </div>
+          </div>
+          <div id="factu-bar-chart" style="overflow-x:auto;padding-bottom:4px"></div>
+        </div>
       </div>
-      <!-- Table: detail per vendor -->
+      <!-- Table -->
       <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px;overflow-x:auto">
         <div style="font-size:14px;font-weight:700;margin-bottom:12px">Detalle por Vendedor</div>
         <table id="factu-detail-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
@@ -711,7 +720,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
           <tbody id="factu-detail-tbody"></tbody>
         </table>
       </div>
-      <!-- Timeline chart -->
+      <!-- Timeline -->
       <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
         <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Evolución temporal</div>
         <div style="font-size:14px;font-weight:700;margin-bottom:14px">Facturación diaria acumulada</div>
@@ -1632,6 +1641,7 @@ function switchView(v,btn){
     const isAdm=(currentRole==='admin'||currentRole==='maestro');
     document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
     document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
+    if(!window._factuLoaded){ window._factuLoaded=true; factuLoadFromDB(); }
   }
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -4661,237 +4671,294 @@ function openUserDetail(name){
 }
 </script>
 
+
 <script>
 // ══════════════════════════════════════════════════════════════════════════════
-// PANEL DE FACTURACIÓN Y COBRANZAS
+// PANEL DE FACTURACIÓN Y COBRANZAS — con persistencia Supabase
 // ══════════════════════════════════════════════════════════════════════════════
-const factuState={f:null,r:null}; // f=facturas, r=recibos
+const FACTU_TABLE = 'factu_data'; // tabla en Supabase
+const FACTU_KEY   = 'latest';     // fila única con toda la data
 
-function factuDrag(e,el){e.preventDefault();el.classList.add('drag');}
-function factuDragLeave(el){el.classList.remove('drag');}
-function factuDrop(e,el,type){
-  e.preventDefault();el.classList.remove('drag');
-  const file=e.dataTransfer.files[0];
-  if(file)factuLoad(file,type);
+const factuState = { f: null, r: null, savedAt: null };
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+function factuDrag(e, el){ e.preventDefault(); el.classList.add('drag'); }
+function factuDragLeave(el){ el.classList.remove('drag'); }
+function factuDrop(e, el, type){
+  e.preventDefault(); el.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) factuLoad(file, type);
 }
 
-function factuLoad(file,type){
-  if(!file||!file.name.endsWith('.xlsx')){showToast('Solo se aceptan archivos .xlsx');return;}
-  const reader=new FileReader();
-  reader.onload=function(e){
+// ── Load xlsx ─────────────────────────────────────────────────────────────────
+function factuLoad(file, type){
+  if(!file || !file.name.endsWith('.xlsx')){ showToast('Solo archivos .xlsx'); return; }
+  const reader = new FileReader();
+  reader.onload = async function(e){
     try{
-      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-      factuState[type]=rows;
-      const box=document.getElementById('factu-box-'+type);
-      box.classList.add('loaded');
-      box.classList.remove('drag');
-      const icon=type==='f'?'✅':'✅';
-      document.getElementById('factu-icon-'+type).textContent=icon;
-      document.getElementById('factu-label-'+type).textContent=file.name;
-      document.getElementById('factu-status-'+type).textContent=rows.length+' registros cargados';
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {defval:''});
+      factuState[type] = rows;
+      // Update upload box UI
+      const box = document.getElementById('factu-box-'+type);
+      box.classList.add('loaded'); box.classList.remove('drag');
+      document.getElementById('factu-icon-'+type).textContent = '✅';
+      document.getElementById('factu-label-'+type).textContent = file.name;
+      document.getElementById('factu-status-'+type).textContent = rows.length+' registros cargados';
       factuRender();
-    }catch(err){showToast('Error al leer el archivo: '+err.message);}
+      // Save to Supabase if both loaded
+      if(factuState.f && factuState.r) await factuSave();
+      else if(factuState.f || factuState.r) await factuSave();
+    } catch(err){ showToast('Error al leer el archivo: '+err.message); }
   };
   reader.readAsArrayBuffer(file);
 }
 
-function factuFmt(n){
-  if(n==null||isNaN(n))return '$0';
-  const abs=Math.abs(n);
-  let s;
-  if(abs>=1e9)s='$'+(abs/1e9).toFixed(2)+' B';
-  else if(abs>=1e6)s='$'+(abs/1e6).toFixed(2)+' M';
-  else s='$'+Math.round(abs).toLocaleString('es-AR');
-  return (n<0?'-':'')+s;
+// ── Save to Supabase ──────────────────────────────────────────────────────────
+async function factuSave(){
+  try{
+    const payload = {
+      id: FACTU_KEY,
+      facturas: factuState.f ? JSON.stringify(factuState.f) : null,
+      recibos:  factuState.r ? JSON.stringify(factuState.r) : null,
+      updated_at: new Date().toISOString(),
+      updated_by: currentUser?.display_name || currentUser?.username || 'admin'
+    };
+    const { error } = await db.from(FACTU_TABLE).upsert(payload, {onConflict:'id'});
+    if(error){ console.warn('factuSave error:', error.message); showToast('⚠ No se pudo guardar en la nube: '+error.message); }
+    else { factuState.savedAt = payload.updated_at; factuUpdateSavedBadge(); showToast('✅ Datos guardados en la nube'); }
+  } catch(err){ console.warn('factuSave exception:', err); }
 }
 
+// ── Load from Supabase ────────────────────────────────────────────────────────
+async function factuLoadFromDB(){
+  try{
+    const { data, error } = await db.from(FACTU_TABLE).select('*').eq('id', FACTU_KEY).maybeSingle();
+    if(error || !data) return;
+    if(data.facturas){ factuState.f = JSON.parse(data.facturas); factuMarkLoaded('f', factuState.f.length+' registros (cloud)'); }
+    if(data.recibos){  factuState.r = JSON.parse(data.recibos);  factuMarkLoaded('r', factuState.r.length+' registros (cloud)'); }
+    factuState.savedAt = data.updated_at;
+    factuUpdateSavedBadge(data.updated_by);
+    if(factuState.f || factuState.r) factuRender();
+  } catch(err){ console.warn('factuLoadFromDB error:', err); }
+}
+
+function factuMarkLoaded(type, statusTxt){
+  const box = document.getElementById('factu-box-'+type);
+  if(!box) return;
+  box.classList.add('loaded');
+  document.getElementById('factu-icon-'+type).textContent = '☁️';
+  document.getElementById('factu-label-'+type).textContent = type==='f' ? 'Facturas (desde la nube)' : 'Recibos (desde la nube)';
+  document.getElementById('factu-status-'+type).textContent = statusTxt;
+}
+
+function factuUpdateSavedBadge(by){
+  const badge = document.getElementById('factu-period-badge');
+  if(!badge) return;
+  if(factuState.savedAt){
+    const d = new Date(factuState.savedAt);
+    const fmt = d.toLocaleString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    badge.textContent = 'Última actualización: '+fmt+(by?' · '+by:'');
+    badge.style.color = 'var(--gr)';
+    badge.style.borderColor = 'rgba(34,197,94,.3)';
+  }
+}
+
+// ── Formatting helpers ────────────────────────────────────────────────────────
+function factuFmt(n){
+  if(n==null||isNaN(n)) return '$0';
+  const abs = Math.abs(n);
+  let s;
+  if(abs>=1e9)      s='$'+(abs/1e9).toFixed(1)+' B';
+  else if(abs>=1e6) s='$'+(abs/1e6).toFixed(1)+' M';
+  else              s='$'+Math.round(abs).toLocaleString('es-AR');
+  return (n<0?'-':'')+s;
+}
 function parseVendName(v){
-  if(!v)return 'Sin asignar';
+  if(!v) return 'Sin asignar';
   return String(v).replace(/^\d+-/,'').trim()||'Sin asignar';
 }
 
+// ── Main render ───────────────────────────────────────────────────────────────
 function factuRender(){
-  const fRows=factuState.f||[];
-  const rRows=factuState.r||[];
-  if(!fRows.length&&!rRows.length)return;
+  const fRows = factuState.f||[];
+  const rRows = factuState.r||[];
+  if(!fRows.length && !rRows.length) return;
 
-  document.getElementById('factu-empty').style.display='none';
-  document.getElementById('factu-charts').style.display='block';
+  document.getElementById('factu-empty').style.display = 'none';
+  document.getElementById('factu-charts').style.display = 'block';
 
-  // ── Aggregate by vendor ──────────────────────────────────────────────────
-  const fByVend={},rByVend={},fByDay={},rByDay={};
-  let totalF=0,totalR=0,fMin='',fMax='',rMin='',rMax='';
+  // ── Aggregate ────────────────────────────────────────────────────────────
+  const fByVend={}, rByVend={}, fByDay={}, rByDay={};
+  let totalF=0, totalR=0;
 
   fRows.forEach(row=>{
-    const vend=parseVendName(row.VENDEDOR);
-    const amt=parseFloat(row.LRETOT)||0;
-    fByVend[vend]=(fByVend[vend]||0)+amt;
-    totalF+=amt;
-    // Day
-    let d=row.REMFEC;
-    if(d instanceof Date)d=d.toISOString().slice(0,10);
-    else if(d)d=String(d).slice(0,10);
-    if(d&&d.length===10){
-      fByDay[d]=(fByDay[d]||0)+amt;
-      if(!fMin||d<fMin)fMin=d;
-      if(!fMax||d>fMax)fMax=d;
-    }
+    const vend = parseVendName(row.VENDEDOR);
+    const amt  = parseFloat(row.LRETOT)||0;
+    fByVend[vend] = (fByVend[vend]||0)+amt;
+    totalF += amt;
+    let d = row.REMFEC;
+    if(d instanceof Date) d=d.toISOString().slice(0,10);
+    else if(d) d=String(d).slice(0,10);
+    if(d&&d.length===10) fByDay[d]=(fByDay[d]||0)+amt;
   });
 
   rRows.forEach(row=>{
-    const vend=parseVendName(row.VENDEDOR);
-    const amt=parseFloat(row.IMP)||0;
-    rByVend[vend]=(rByVend[vend]||0)+amt;
-    totalR+=amt;
-    let d=row.FEC;
-    if(d instanceof Date)d=d.toISOString().slice(0,10);
-    else if(d)d=String(d).slice(0,10);
-    if(d&&d.length===10){
-      rByDay[d]=(rByDay[d]||0)+amt;
-      if(!rMin||d<rMin)rMin=d;
-      if(!rMax||d>rMax)rMax=d;
-    }
+    const vend = parseVendName(row.VENDEDOR);
+    const amt  = parseFloat(row.IMP)||0;
+    rByVend[vend] = (rByVend[vend]||0)+amt;
+    totalR += amt;
+    let d = row.FEC;
+    if(d instanceof Date) d=d.toISOString().slice(0,10);
+    else if(d) d=String(d).slice(0,10);
+    if(d&&d.length===10) rByDay[d]=(rByDay[d]||0)+amt;
   });
 
-  // Period badge
-  const pMin=[fMin,rMin].filter(Boolean).sort()[0]||'';
-  const pMax=[fMax,rMax].filter(Boolean).sort().reverse()[0]||'';
-  const badge=document.getElementById('factu-period-badge');
-  if(pMin&&pMax){
-    const fmt=d=>d?new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'?';
-    badge.textContent=fmt(pMin)+' → '+fmt(pMax);
+  const allVends = [...new Set([...Object.keys(fByVend),...Object.keys(rByVend)])];
+  allVends.sort((a,b)=>(fByVend[b]||0)-(fByVend[a]||0));
+
+  // Date range badge
+  const allDays = [...new Set([...Object.keys(fByDay),...Object.keys(rByDay)])].sort();
+  if(allDays.length && !factuState.savedAt){
+    const fmt=d=>new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const badge = document.getElementById('factu-period-badge');
+    badge.textContent = fmt(allDays[0])+' → '+fmt(allDays[allDays.length-1]);
   }
 
-  // ── KPI Cards ──────────────────────────────────────────────────────────
-  const kpis=document.getElementById('factu-kpis');
-  const diff=totalF-totalR;
-  const pct=totalF>0?Math.round(totalR/totalF*100):0;
-  const nVendF=Object.keys(fByVend).length;
-  const nVendR=Object.keys(rByVend).length;
-  kpis.innerHTML=[
-    {label:'Total Facturado',val:factuFmt(totalF),sub:nVendF+' vendedores',col:'#34d399'},
-    {label:'Total Cobrado',val:factuFmt(totalR),sub:nVendR+' vendedores',col:'#60a5fa'},
-    {label:'Diferencia (Fctu-Cobr)',val:factuFmt(diff),sub:diff>=0?'Pendiente de cobro':'Cobrado > Facturado',col:diff>=0?'#fbbf24':'#f87171'},
-    {label:'% de Cobranza',val:pct+'%',sub:'sobre total facturado',col:pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171'},
-    {label:'Registros Facturación',val:fRows.length.toLocaleString('es'),sub:'filas importadas',col:'var(--ac)'},
-    {label:'Registros Cobranzas',val:rRows.length.toLocaleString('es'),sub:'filas importadas',col:'var(--ac)'},
-  ].map(k=>`<div class="factu-kpi">
-    <div class="factu-kpi-label">${k.label}</div>
-    <div class="factu-kpi-val" style="color:${k.col}">${k.val}</div>
-    <div class="factu-kpi-sub">${k.sub}</div>
-  </div>`).join('');
+  // ── KPI Cards (Xbox-style) ────────────────────────────────────────────────
+  const diff = totalF-totalR;
+  const pct  = totalF>0?Math.round(totalR/totalF*100):0;
+  const pctCol = pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171';
 
-  // ── Bar Chart: Facturación vs Cobranzas por vendedor ──────────────────
-  const allVends=[...new Set([...Object.keys(fByVend),...Object.keys(rByVend)])];
-  // Sort by facturacion desc
-  allVends.sort((a,b)=>(fByVend[b]||0)-(fByVend[a]||0));
-  const maxVal=Math.max(1,...allVends.map(v=>Math.max(fByVend[v]||0,rByVend[v]||0)));
-  const BAR_H=28,GAP=8,LABEL_W=160;
+  document.getElementById('factu-kpis').innerHTML = [
+    {icon:'📄',label:'Total Facturado',  val:factuFmt(totalF), sub:Object.keys(fByVend).length+' vendedores', col:'#34d399', bg:'rgba(52,211,153,.08)', border:'rgba(52,211,153,.2)'},
+    {icon:'💳',label:'Total Cobrado',    val:factuFmt(totalR), sub:Object.keys(rByVend).length+' vendedores', col:'#60a5fa', bg:'rgba(96,165,250,.08)', border:'rgba(96,165,250,.2)'},
+    {icon:'⚡',label:'Diferencia',       val:factuFmt(Math.abs(diff)), sub:diff>=0?'Pendiente de cobro':'Cobrado > Facturado', col:diff>=0?'#fbbf24':'#f87171', bg:diff>=0?'rgba(234,179,8,.08)':'rgba(239,68,68,.08)', border:diff>=0?'rgba(234,179,8,.2)':'rgba(239,68,68,.2)'},
+    {icon:'📊',label:'% de Cobranza',    val:pct+'%',          sub:'sobre total facturado',   col:pctCol, bg:'rgba(168,85,247,.08)', border:'rgba(168,85,247,.2)'},
+    {icon:'🗂',label:'Fact. importadas', val:fRows.length.toLocaleString('es'), sub:'registros', col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
+    {icon:'🗂',label:'Cobr. importadas', val:rRows.length.toLocaleString('es'), sub:'registros', col:'var(--ac)', bg:'rgba(255,214,0,.06)', border:'rgba(255,214,0,.15)'},
+  ].map(k=>`
+    <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:16px 18px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:14px;top:12px;font-size:22px;opacity:.25">${k.icon}</div>
+      <div style="font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:6px">${k.label}</div>
+      <div style="font-size:22px;font-weight:700;color:${k.col};font-family:var(--mo);letter-spacing:-1px">${k.val}</div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:3px">${k.sub}</div>
+    </div>`).join('');
 
-  const chartH=allVends.length*(BAR_H*2+GAP+10)+40;
-  let svgRows='';
-  allVends.forEach((vend,i)=>{
-    const yBase=i*(BAR_H*2+GAP+10)+20;
-    const wF=Math.round((fByVend[vend]||0)/maxVal*100);
-    const wR=Math.round((rByVend[vend]||0)/maxVal*100);
-    const pctCob=fByVend[vend]>0?Math.round((rByVend[vend]||0)/(fByVend[vend]||1)*100):0;
-    svgRows+=`
-      <text x="${LABEL_W-6}" y="${yBase+BAR_H/2+4}" text-anchor="end" font-size="10" fill="var(--tx2)" font-family="var(--mo)">${vend.length>22?vend.slice(0,21)+'…':vend}</text>
-      <rect x="${LABEL_W}" y="${yBase}" width="${wF+'%'}" height="${BAR_H}" rx="3" fill="#34d399" opacity=".85"/>
-      <text x="${LABEL_W+4+wF*4}" y="${yBase+BAR_H/2+4}" font-size="9" fill="#34d399" font-family="var(--mo)">${factuFmt(fByVend[vend]||0)}</text>
-      <rect x="${LABEL_W}" y="${yBase+BAR_H+3}" width="${wR+'%'}" height="${BAR_H}" rx="3" fill="#60a5fa" opacity=".8"/>
-      <text x="${LABEL_W+4+wR*4}" y="${yBase+BAR_H+3+BAR_H/2+4}" font-size="9" fill="#60a5fa" font-family="var(--mo)">${factuFmt(rByVend[vend]||0)} (${pctCob}%)</text>
-    `;
+  // ── Podio Top 3 ──────────────────────────────────────────────────────────
+  const top3 = allVends.slice(0,3);
+  const medals = ['🥇','🥈','🥉'];
+  const podioColors = ['#FFD600','#94a3b8','#cd7c2f'];
+  const podioH = [80,60,50];
+  const podioOrder = [1,0,2]; // 2nd, 1st, 3rd visually
+  const podioLabels = ['2DO','1ER','3ER'];
+
+  let podioHtml = `<div style="display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:0 20px 0;height:130px">`;
+  podioOrder.forEach((idx,pos)=>{
+    const vend = top3[idx];
+    if(!vend){ podioHtml+=`<div style="flex:1"></div>`; return; }
+    const fv = fByVend[vend]||0;
+    const rv = rByVend[vend]||0;
+    const col = podioColors[idx];
+    const h = podioH[pos];
+    const initials = vend.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
+    podioHtml += `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:18px">${medals[idx]}</div>
+        <div style="width:42px;height:42px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#000;flex-shrink:0">${initials}</div>
+        <div style="font-size:9px;font-family:var(--mo);color:var(--tx2);text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${vend.length>12?vend.slice(0,11)+'…':vend}</div>
+        <div style="width:100%;height:${h}px;background:${col};opacity:.85;border-radius:6px 6px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;gap:1px">
+          <div style="font-size:9px;font-weight:700;color:#000;font-family:var(--mo)">${factuFmt(fv)}</div>
+          <div style="font-size:8px;color:rgba(0,0,0,.6);font-family:var(--mo)">${factuFmt(rv)}</div>
+          <div style="font-size:8px;font-weight:700;color:#000;background:rgba(0,0,0,.15);border-radius:3px;padding:0 4px">${podioLabels[pos]}</div>
+        </div>
+      </div>`;
   });
+  podioHtml += `</div>`;
 
-  // Use canvas-based bar chart for better responsiveness
-  const barsHtml=allVends.map(vend=>{
-    const fv=fByVend[vend]||0;
-    const rv=rByVend[vend]||0;
-    const wF=Math.round(fv/maxVal*100);
-    const wR=Math.round(rv/maxVal*100);
+  // ── Bar Chart per vendor ──────────────────────────────────────────────────
+  const maxVal = Math.max(1,...allVends.map(v=>Math.max(fByVend[v]||0,rByVend[v]||0)));
+  const barsHtml = allVends.map((vend,i)=>{
+    const fv=fByVend[vend]||0, rv=rByVend[vend]||0;
+    const wF=Math.round(fv/maxVal*100), wR=Math.round(rv/maxVal*100);
     const pctCob=fv>0?Math.round(rv/fv*100):0;
-    const pctColor=pctCob>=80?'#34d399':pctCob>=50?'#fbbf24':'#f87171';
-    return `<div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;align-items:center;margin-bottom:8px">
-      <div style="font-size:10px;font-family:var(--mo);color:var(--tx2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${vend}">${vend.length>20?vend.slice(0,19)+'…':vend}</div>
+    const pCol=pctCob>=80?'#34d399':pctCob>=50?'#fbbf24':'#f87171';
+    const isMedal = i<3 ? medals[i]+' ' : '';
+    return `<div style="display:grid;grid-template-columns:150px 1fr 48px;gap:8px;align-items:center;margin-bottom:7px">
+      <div style="font-size:10px;font-family:var(--mo);color:var(--tx2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${vend}">${isMedal}${vend.length>17?vend.slice(0,16)+'…':vend}</div>
       <div style="display:flex;flex-direction:column;gap:3px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="flex:1;height:14px;background:var(--bd);border-radius:3px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="flex:1;height:13px;background:var(--bd);border-radius:3px;overflow:hidden">
             <div style="width:${wF}%;height:100%;background:#34d399;border-radius:3px;transition:width .5s"></div>
           </div>
-          <span style="font-size:9px;font-family:var(--mo);color:#34d399;width:90px;flex-shrink:0">${factuFmt(fv)}</span>
+          <span style="font-size:9px;font-family:var(--mo);color:#34d399;width:78px;flex-shrink:0;text-align:right">${factuFmt(fv)}</span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="flex:1;height:14px;background:var(--bd);border-radius:3px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:5px">
+          <div style="flex:1;height:13px;background:var(--bd);border-radius:3px;overflow:hidden">
             <div style="width:${wR}%;height:100%;background:#60a5fa;border-radius:3px;transition:width .5s"></div>
           </div>
-          <span style="font-size:9px;font-family:var(--mo);color:#60a5fa;width:90px;flex-shrink:0">${factuFmt(rv)}</span>
+          <span style="font-size:9px;font-family:var(--mo);color:#60a5fa;width:78px;flex-shrink:0;text-align:right">${factuFmt(rv)}</span>
         </div>
       </div>
-      <div style="font-size:10px;font-family:var(--mo);color:${pctColor};font-weight:700;width:42px;text-align:right">${pctCob}%</div>
+      <div style="font-size:11px;font-family:var(--mo);color:${pCol};font-weight:700;text-align:right">${pctCob}%</div>
     </div>`;
   }).join('');
-  document.getElementById('factu-bar-chart').innerHTML=barsHtml;
 
-  // ── Detail Table ───────────────────────────────────────────────────────
-  const tbody=document.getElementById('factu-detail-tbody');
-  tbody.innerHTML=allVends.map(vend=>{
-    const fv=fByVend[vend]||0;
-    const rv=rByVend[vend]||0;
-    const diff=fv-rv;
-    const pctCob=fv>0?Math.round(rv/fv*100):0;
+  document.getElementById('factu-bar-chart').innerHTML = barsHtml;
+
+  // ── Combine podio + legend in bar chart header (rendered outside) ─────────
+  const podioEl = document.getElementById('factu-podio');
+  if(podioEl) podioEl.innerHTML = podioHtml;
+
+  // ── Detail Table ──────────────────────────────────────────────────────────
+  document.getElementById('factu-detail-tbody').innerHTML = allVends.map((vend,i)=>{
+    const fv=fByVend[vend]||0, rv=rByVend[vend]||0;
+    const diff=fv-rv, pctCob=fv>0?Math.round(rv/fv*100):0;
     const diffCol=diff>=0?'#fbbf24':'#f87171';
     const pctCol=pctCob>=80?'#34d399':pctCob>=50?'#fbbf24':'#f87171';
+    const medal = i<3?medals[i]+' ':'';
     return `<tr style="border-bottom:1px solid rgba(42,48,72,.5)">
-      <td style="padding:6px 10px;font-size:11px;color:var(--tx)">${vend}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--tx)">${medal}${vend}</td>
       <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:#34d399">${factuFmt(fv)}</td>
       <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:#60a5fa">${factuFmt(rv)}</td>
       <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:${diffCol}">${factuFmt(diff)}</td>
-      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:${pctCol}">${pctCob}%</td>
+      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:${pctCol};font-weight:700">${pctCob}%</td>
     </tr>`;
   }).join('');
 
-  // ── Timeline: daily accumulated facturación ────────────────────────────
-  // Build date range
-  const allDays=new Set([...Object.keys(fByDay),...Object.keys(rByDay)]);
-  const sortedDays=[...allDays].sort();
-  if(sortedDays.length>0){
-    let cumF=0,cumR=0;
-    const points=sortedDays.map(d=>{
-      cumF+=fByDay[d]||0;
-      cumR+=rByDay[d]||0;
-      return {d,cumF,cumR};
-    });
-    const maxCum=Math.max(1,...points.map(p=>Math.max(p.cumF,p.cumR)));
-    const barW=Math.max(6,Math.min(40,Math.floor(760/Math.max(points.length,1))-3));
-    const step=points.length>20?Math.ceil(points.length/10):1;
+  // ── Timeline daily accumulated ────────────────────────────────────────────
+  const sortedDays = allDays.length?allDays:[...new Set([...Object.keys(fByDay),...Object.keys(rByDay)])].sort();
+  if(sortedDays.length){
+    let cumF=0, cumR=0;
+    const points = sortedDays.map(d=>{ cumF+=fByDay[d]||0; cumR+=rByDay[d]||0; return {d,cumF,cumR}; });
+    const maxCum = Math.max(1,...points.map(p=>Math.max(p.cumF,p.cumR)));
+    const barW = Math.max(5,Math.min(36,Math.floor(720/Math.max(points.length,1))-2));
+    const step = points.length>20?Math.ceil(points.length/10):1;
 
-    const tlHtml=`<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding-bottom:0">
-      ${points.map((p,i)=>{
-        const hF=Math.max(2,Math.round(p.cumF/maxCum*70));
-        const hR=Math.max(2,Math.round(p.cumR/maxCum*70));
-        const isLast=i===points.length-1;
-        return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;width:${barW}px" title="${p.d}\nFacturación: ${factuFmt(p.cumF)}\nCobranzas: ${factuFmt(p.cumR)}">
-          <div style="width:${Math.max(2,barW-2)}px;height:${hF}px;background:#34d399;border-radius:2px 2px 0 0;opacity:.8${isLast?';outline:1px solid var(--ac)':''}"></div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="display:flex;gap:2px;margin-top:3px">
-      ${points.map((p,i)=>{
-        const show=(i%step===0)||i===points.length-1;
-        const label=show?new Date(p.d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
-        return `<div style="font-size:8px;font-family:var(--mo);color:var(--tx3);flex-shrink:0;width:${barW}px;text-align:center;overflow:hidden">${label}</div>`;
-      }).join('')}
-    </div>
-    <div style="margin-top:8px;font-size:10px;font-family:var(--mo);color:var(--tx3)">
-      Acumulado final — Facturación: <strong style="color:#34d399">${factuFmt(points[points.length-1].cumF)}</strong>
-      &nbsp;·&nbsp; Cobranzas: <strong style="color:#60a5fa">${factuFmt(points[points.length-1].cumR)}</strong>
-    </div>`;
-    document.getElementById('factu-timeline-chart').innerHTML=tlHtml;
+    document.getElementById('factu-timeline-chart').innerHTML=`
+      <div style="display:flex;align-items:flex-end;gap:1px;height:80px">
+        ${points.map((p,i)=>{
+          const hF=Math.max(2,Math.round(p.cumF/maxCum*70));
+          return `<div style="flex-shrink:0;width:${barW}px;height:${hF}px;background:#34d399;border-radius:2px 2px 0 0;opacity:.8" title="${p.d}\nFact: ${factuFmt(p.cumF)}\nCobr: ${factuFmt(p.cumR)}"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:1px;margin-top:3px">
+        ${points.map((p,i)=>{
+          const show=(i%step===0)||i===points.length-1;
+          return `<div style="font-size:8px;font-family:var(--mo);color:var(--tx3);flex-shrink:0;width:${barW}px;text-align:center;overflow:hidden">${show?new Date(p.d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):''}</div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:8px;font-size:10px;font-family:var(--mo);color:var(--tx3)">
+        Acumulado — Facturación: <strong style="color:#34d399">${factuFmt(points[points.length-1].cumF)}</strong>
+        &nbsp;·&nbsp; Cobranzas: <strong style="color:#60a5fa">${factuFmt(points[points.length-1].cumR)}</strong>
+      </div>`;
   }
 }
+
+// Load data from DB when the factu tab is opened
+window._factuLoaded = false;
+const _origSwitchView = window.switchView;
 </script>
 
 </body>
