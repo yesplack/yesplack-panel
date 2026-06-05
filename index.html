@@ -683,10 +683,10 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
     <div id="factu-charts" style="display:none">
       <!-- Podio Top 3 + Bar Chart -->
       <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;margin-bottom:14px">
-        <!-- Podio -->
+      <!-- Podio -->
         <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px">
           <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Top vendedores</div>
-          <div style="font-size:13px;font-weight:700;margin-bottom:14px">🏆 Podio</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px">🏆 Podio Facturación</div>
           <div id="factu-podio"></div>
         </div>
         <!-- Bar Chart -->
@@ -4726,8 +4726,19 @@ async function factuSave(){
       updated_by: currentUser?.display_name || currentUser?.username || 'admin'
     };
     const { error } = await db.from(FACTU_TABLE).upsert(payload, {onConflict:'id'});
-    if(error){ console.warn('factuSave error:', error.message); showToast('⚠ No se pudo guardar en la nube: '+error.message); }
-    else { factuState.savedAt = payload.updated_at; factuUpdateSavedBadge(); showToast('✅ Datos guardados en la nube'); }
+    if(error){
+      console.warn('factuSave error:', error.message);
+      // RLS policy error — guide the user
+      if(error.message&&error.message.includes('security policy')){
+        showToast('⚠ RLS activo: ejecutá en Supabase → ALTER TABLE factu_data DISABLE ROW LEVEL SECURITY;','err');
+      } else {
+        showToast('⚠ Error al guardar: '+error.message,'err');
+      }
+    } else {
+      factuState.savedAt = payload.updated_at;
+      factuUpdateSavedBadge(payload.updated_by);
+      showToast('✅ Datos guardados en la nube');
+    }
   } catch(err){ console.warn('factuSave exception:', err); }
 }
 
@@ -4850,32 +4861,39 @@ function factuRender(){
   const top3 = allVends.slice(0,3);
   const medals = ['🥇','🥈','🥉'];
   const podioColors = ['#FFD600','#94a3b8','#cd7c2f'];
-  const podioH = [80,60,50];
-  const podioOrder = [1,0,2]; // 2nd, 1st, 3rd visually
-  const podioLabels = ['2DO','1ER','3ER'];
+  // Visual order: 2nd (left), 1st (center), 3rd (right)
+  const podioOrder = [1,0,2];
+  const podioLabel = ['2DO','1ER','3ER'];
+  // Column heights for the podium base (px)
+  const podioBaseH = [55,80,40];
 
-  let podioHtml = `<div style="display:flex;align-items:flex-end;justify-content:center;gap:8px;padding:0 20px 0;height:130px">`;
-  podioOrder.forEach((idx,pos)=>{
-    const vend = top3[idx];
-    if(!vend){ podioHtml+=`<div style="flex:1"></div>`; return; }
+  // Build each column
+  const podioCols = podioOrder.map((rankIdx, colPos) => {
+    const vend = top3[rankIdx];
+    if(!vend) return `<div style="flex:1"></div>`;
     const fv = fByVend[vend]||0;
     const rv = rByVend[vend]||0;
-    const col = podioColors[idx];
-    const h = podioH[pos];
-    const initials = vend.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
-    podioHtml += `
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-size:18px">${medals[idx]}</div>
-        <div style="width:42px;height:42px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#000;flex-shrink:0">${initials}</div>
-        <div style="font-size:9px;font-family:var(--mo);color:var(--tx2);text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${vend.length>12?vend.slice(0,11)+'…':vend}</div>
-        <div style="width:100%;height:${h}px;background:${col};opacity:.85;border-radius:6px 6px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;gap:1px">
-          <div style="font-size:9px;font-weight:700;color:#000;font-family:var(--mo)">${factuFmt(fv)}</div>
-          <div style="font-size:8px;color:rgba(0,0,0,.6);font-family:var(--mo)">${factuFmt(rv)}</div>
-          <div style="font-size:8px;font-weight:700;color:#000;background:rgba(0,0,0,.15);border-radius:3px;padding:0 4px">${podioLabels[pos]}</div>
+    const col = podioColors[rankIdx];
+    const baseH = podioBaseH[colPos];
+    const initials = vend.split(' ').filter(Boolean).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const shortName = vend.length>10 ? vend.slice(0,9)+'…' : vend;
+    return `
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:0">
+        <div style="font-size:20px;line-height:1;margin-bottom:4px">${medals[rankIdx]}</div>
+        <div style="width:38px;height:38px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#000;flex-shrink:0;margin-bottom:3px">${initials}</div>
+        <div style="font-size:8px;font-family:var(--mo);color:var(--tx2);text-align:center;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:6px">${shortName}</div>
+        <div style="width:100%;height:${baseH}px;background:${col};border-radius:5px 5px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:6px 3px">
+          <div style="font-size:8px;font-weight:700;color:#000;font-family:var(--mo);text-align:center;word-break:break-all;line-height:1.2">${factuFmt(fv)}</div>
+          <div style="font-size:7px;color:rgba(0,0,0,.55);font-family:var(--mo);margin-top:1px">${factuFmt(rv)}</div>
+          <div style="font-size:7px;font-weight:700;color:#000;background:rgba(0,0,0,.18);border-radius:2px;padding:0 3px;margin-top:2px">${podioLabel[colPos]}</div>
         </div>
       </div>`;
   });
-  podioHtml += `</div>`;
+
+  const podioHtml = `
+    <div style="display:flex;align-items:flex-end;gap:4px;padding:8px 4px 0;border-bottom:2px solid var(--bd)">
+      ${podioCols.join('')}
+    </div>`;
 
   // ── Bar Chart per vendor ──────────────────────────────────────────────────
   const maxVal = Math.max(1,...allVends.map(v=>Math.max(fByVend[v]||0,rByVend[v]||0)));
