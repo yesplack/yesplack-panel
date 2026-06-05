@@ -1213,6 +1213,10 @@ let called={},notes={},agendas={};
 let currentUser=null,currentRole='';
 let modalId=null,modalNom='';
 let editUserId=null,pwTargetId=null;
+// ── Facturación panel state (defined early so switchView can reference it) ──
+const FACTU_TABLE='factu_data', FACTU_KEY='latest';
+const factuState={f:null,r:null,savedAt:null};
+let factuActiveMonth='all';
 let ndTimers={},notifTimers={};
 
 // ── SHA-256 ──
@@ -1675,11 +1679,11 @@ function switchView(v,btn){
     const isAdm=(currentRole==='admin'||currentRole==='maestro');
     document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
     document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
-    // Load from DB: on first open, OR if state is empty (e.g. after logout/login)
-    const hasData = factuState.f||factuState.r;
-    if(!window._factuLoaded || !hasData){
+    const hasData=factuState.f||factuState.r;
+    if(!window._factuLoaded||!hasData){
       window._factuLoaded=true;
-      factuLoadFromDB();
+      if(typeof factuLoadFromDB==='function') factuLoadFromDB();
+      else { const t=setInterval(()=>{ if(typeof factuLoadFromDB==='function'){clearInterval(t);factuLoadFromDB();} },200); }
     }
   }
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
@@ -4715,11 +4719,7 @@ function openUserDetail(name){
 // ══════════════════════════════════════════════════════════════════════════════
 // PANEL DE FACTURACIÓN Y COBRANZAS — con persistencia Supabase
 // ══════════════════════════════════════════════════════════════════════════════
-const FACTU_TABLE = 'factu_data';
-const FACTU_KEY   = 'latest';
-
-const factuState = { f: null, r: null, savedAt: null };
-let factuActiveMonth = 'all'; // current month filter
+// (FACTU_TABLE, FACTU_KEY, factuState, factuActiveMonth declared in main script)
 
 // ── Drag & Drop ───────────────────────────────────────────────────────────────
 function factuDrag(e, el){ e.preventDefault(); el.classList.add('drag'); }
