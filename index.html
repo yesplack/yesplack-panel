@@ -654,6 +654,14 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       </div>
       <div id="factu-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Sin datos cargados</div>
     </div>
+    <!-- Debug console - permanente para diagnóstico -->
+    <div id="factu-debug" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:14px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="color:#58a6ff;font-weight:700">🔍 Debug Console</span>
+        <button onclick="document.getElementById('factu-debug-log').innerHTML=''" style="background:none;border:1px solid #30363d;color:#8b949e;border-radius:3px;padding:1px 8px;font-size:10px;cursor:pointer">limpiar</button>
+      </div>
+      <div id="factu-debug-log" style="color:#8b949e;line-height:1.6"></div>
+    </div>
     <!-- Upload zone — solo admin/maestro -->
     <div id="factu-upload-zone" style="display:none">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
@@ -1680,11 +1688,12 @@ function switchView(v,btn){
     document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
     document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
     const hasData=factuState.f||factuState.r;
+    factuLog('Tab factu abierto. rol='+currentRole+' admin='+isAdm+' _loaded='+window._factuLoaded+' hasData='+!!hasData);
     if(!window._factuLoaded||!hasData){
       window._factuLoaded=true;
-      if(typeof factuLoadFromDB==='function') factuLoadFromDB();
-      else { const t=setInterval(()=>{ if(typeof factuLoadFromDB==='function'){clearInterval(t);factuLoadFromDB();} },200); }
-    }
+      if(typeof factuLoadFromDB==='function'){ factuLog('Llamando factuLoadFromDB()...'); factuLoadFromDB(); }
+      else { factuLog('⚠ factuLoadFromDB no definida aún, esperando...','warn'); const t=setInterval(()=>{ if(typeof factuLoadFromDB==='function'){clearInterval(t);factuLog('factuLoadFromDB disponible, llamando...'); factuLoadFromDB();} },200); }
+    } else { factuLog('Datos ya en memoria, omitiendo carga'); }
   }
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
@@ -4816,30 +4825,48 @@ async function factuSave(){
 }
 
 // ── Load from Supabase ────────────────────────────────────────────────────────
+// ── Debug logger ──────────────────────────────────────────────────────────────
+function factuLog(msg, type='info'){
+  const colors={info:'#8b949e',ok:'#3fb950',warn:'#d29922',err:'#f85149'};
+  const el=document.getElementById('factu-debug-log');
+  if(!el)return;
+  const t=new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML+=`<div style="color:${colors[type]||colors.info}">[${t}] ${msg}</div>`;
+  el.scrollTop=el.scrollHeight;
+  console.log('[FACTU]',msg);
+}
+
 async function factuLoadFromDB(){
+  factuLog('Iniciando carga desde Supabase...');
   // Wait for db to be ready (up to 5s)
   let tries=0;
   while(typeof db==='undefined' && tries<10){ await new Promise(r=>setTimeout(r,500)); tries++; }
-  if(typeof db==='undefined'){ console.warn('factuLoadFromDB: db not ready'); return; }
+  if(typeof db==='undefined'){ factuLog('❌ db no disponible después de 5s','err'); return; }
+  factuLog('db disponible. Consultando tabla: '+FACTU_TABLE);
   try{
     const { data, error } = await db.from(FACTU_TABLE).select('*').eq('id', FACTU_KEY).maybeSingle();
-    if(error){ console.warn('factuLoadFromDB error:', error.message); return; }
-    if(!data){ console.log('factuLoadFromDB: no data yet'); return; }
+    if(error){ factuLog('❌ Error Supabase: '+error.message+' | code: '+error.code,'err'); return; }
+    if(!data){ factuLog('⚠ Sin datos en tabla (0 filas con id="'+FACTU_KEY+'")','warn'); return; }
+    factuLog('✅ Fila encontrada. updated_at: '+data.updated_at);
+    factuLog('facturas: '+(data.facturas?'JSON presente ('+data.facturas.length+' chars)':'null'));
+    factuLog('recibos: '+(data.recibos?'JSON presente ('+data.recibos.length+' chars)':'null'));
     if(data.facturas){
-      try{ factuState.f = JSON.parse(data.facturas); }catch(e){ console.warn('parse facturas error',e); }
+      try{ factuState.f = JSON.parse(data.facturas); factuLog('✅ Facturas parseadas: '+factuState.f.length+' registros','ok'); }
+      catch(e){ factuLog('❌ Error parseando facturas: '+e.message,'err'); }
       factuMarkLoaded('f', (factuState.f||[]).length+' registros (cloud)');
     }
     if(data.recibos){
-      try{ factuState.r = JSON.parse(data.recibos); }catch(e){ console.warn('parse recibos error',e); }
+      try{ factuState.r = JSON.parse(data.recibos); factuLog('✅ Recibos parseados: '+factuState.r.length+' registros','ok'); }
+      catch(e){ factuLog('❌ Error parseando recibos: '+e.message,'err'); }
       factuMarkLoaded('r', (factuState.r||[]).length+' registros (cloud)');
     }
     factuState.savedAt = data.updated_at;
     factuUpdateSavedBadge(data.updated_by);
     if(factuState.f || factuState.r){
-      // Small delay to ensure DOM is painted
-      setTimeout(()=>factuRender(), 80);
-    }
-  } catch(err){ console.warn('factuLoadFromDB exception:', err); }
+      factuLog('Llamando factuRender()...');
+      setTimeout(()=>{ factuRender(); factuLog('factuRender() completado','ok'); }, 80);
+    } else { factuLog('⚠ Ni facturas ni recibos cargados — no se renderiza','warn'); }
+  } catch(err){ factuLog('❌ Excepción: '+err.message,'err'); console.error(err); }
 }
 
 function factuMarkLoaded(type, statusTxt){
