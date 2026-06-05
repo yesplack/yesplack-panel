@@ -542,7 +542,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       <button class="tab" style="display:none" onclick="switchView('lista',this)">Lista</button>
       <button class="tab" id="buscar-tab" onclick="switchView('buscar',this)">🔍 Buscador</button>
       <button class="tab" id="stats-tab-btn" onclick="switchView('stats',this)">Stats</button>
-      <button class="tab" id="factu-tab-btn" onclick="switchView('factu',this)" style="color:#34d399">💰 Facturación</button>
+      <button class="tab" id="factu-tab-btn" onclick="switchView('factu',this)" style="display:none;color:#34d399">💰 Facturación</button>
       <button class="tab om on" id="listaom-tab" onclick="switchView('listaom',this)">&#128217; LISTA OM</button>
       <button class="tab r25" id="listar25-tab" onclick="switchView('listar25',this)">&#128212; LISTA R25</button>
       <button class="tab adm" id="admin-tab" style="display:none" onclick="switchView('admin',this)">Usuarios</button>
@@ -654,22 +654,28 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       </div>
       <div id="factu-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Sin datos cargados</div>
     </div>
-    <!-- Upload zone -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-      <div class="factu-upload-box" id="factu-box-f" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'f')" onclick="document.getElementById('factu-inp-f').click()">
-        <input type="file" id="factu-inp-f" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'f')">
-        <div id="factu-icon-f" style="font-size:28px;margin-bottom:6px">📄</div>
-        <div id="factu-label-f" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Facturas</div>
-        <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
-        <div id="factu-status-f" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+    <!-- Upload zone — solo admin/maestro -->
+    <div id="factu-upload-zone" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+        <div class="factu-upload-box" id="factu-box-f" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'f')" onclick="document.getElementById('factu-inp-f').click()">
+          <input type="file" id="factu-inp-f" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'f')">
+          <div id="factu-icon-f" style="font-size:28px;margin-bottom:6px">📄</div>
+          <div id="factu-label-f" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Facturas</div>
+          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+          <div id="factu-status-f" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+        </div>
+        <div class="factu-upload-box" id="factu-box-r" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'r')" onclick="document.getElementById('factu-inp-r').click()">
+          <input type="file" id="factu-inp-r" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'r')">
+          <div id="factu-icon-r" style="font-size:28px;margin-bottom:6px">💳</div>
+          <div id="factu-label-r" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Recibos (Cobranzas)</div>
+          <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+          <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+        </div>
       </div>
-      <div class="factu-upload-box" id="factu-box-r" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'r')" onclick="document.getElementById('factu-inp-r').click()">
-        <input type="file" id="factu-inp-r" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'r')">
-        <div id="factu-icon-r" style="font-size:28px;margin-bottom:6px">💳</div>
-        <div id="factu-label-r" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Recibos (Cobranzas)</div>
-        <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
-        <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
-      </div>
+    </div>
+    <!-- Aviso para vendedores (solo lectura) -->
+    <div id="factu-readonly-notice" style="display:none;background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);border-radius:9px;padding:12px 16px;margin-bottom:18px;font-size:11px;color:#93c5fd;font-family:var(--mo)">
+      📊 Los datos son cargados por el administrador. Cuando haya información disponible, la verás acá.
     </div>
     <!-- KPI Summary Cards -->
     <div id="factu-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px;margin-bottom:18px"></div>
@@ -1207,6 +1213,7 @@ if(can('manageUsers'))document.getElementById('admin-tab').style.display='';
 if(can('editTemplate')){document.getElementById('tpl-tab').style.display='';document.getElementById('wsp-tab').style.display='';}
 if(can('createClients'))document.getElementById('newcli-tab').style.display='';
 if(currentRole==='maestro'){const rb=document.getElementById('reset-btn');if(rb)rb.style.display='';}
+document.getElementById('factu-tab-btn').style.display='';
     initApp();
   }catch(e){err.textContent='Error: '+e.message;btn.disabled=false;btn.textContent='Entrar';}
 }
@@ -1219,6 +1226,7 @@ function doLogout(){
   document.getElementById('l-err').textContent='';
   document.getElementById('l-btn').disabled=false;document.getElementById('l-btn').textContent='Entrar';
   document.getElementById('admin-tab').style.display='none';document.getElementById('tpl-tab').style.display='none';document.getElementById('wsp-tab').style.display='none';document.getElementById('newcli-tab').style.display='none';
+  document.getElementById('factu-tab-btn').style.display='none';
   document.getElementById('user-btn').textContent='👤 —';
   // Switch to lista tab
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
@@ -1620,6 +1628,11 @@ function switchView(v,btn){
     window._statsPeriod=window._statsPeriod||'week';renderStats();
   }
   if(v==='admin'&&can('manageUsers'))loadUsers();
+  if(v==='factu'){
+    const isAdm=(currentRole==='admin'||currentRole==='maestro');
+    document.getElementById('factu-upload-zone').style.display=isAdm?'block':'none';
+    document.getElementById('factu-readonly-notice').style.display=isAdm?'none':'block';
+  }
   if(v==='template'){initTemplateEditor();loadTemplateLibrary('email');}
   if(v==='wsp'){initWspEditor();loadTemplateLibrary('wsp');}
   if(v==='newcli')initNewCliForm();
