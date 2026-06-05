@@ -654,13 +654,18 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       </div>
       <div id="factu-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Sin datos cargados</div>
     </div>
-    <!-- Debug console - permanente para diagnóstico -->
-    <div id="factu-debug" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px;margin-bottom:14px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-        <span style="color:#58a6ff;font-weight:700">🔍 Debug Console</span>
-        <button onclick="document.getElementById('factu-debug-log').innerHTML=''" style="background:none;border:1px solid #30363d;color:#8b949e;border-radius:3px;padding:1px 8px;font-size:10px;cursor:pointer">limpiar</button>
+    <!-- Debug console - colapsable -->
+    <div id="factu-debug" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;margin-bottom:14px;overflow:hidden">
+      <div onclick="(function(){var b=document.getElementById('factu-debug-body');var a=document.getElementById('factu-debug-arrow');var open=b.style.display!=='none';b.style.display=open?'none':'block';a.textContent=open?'▶':'▼'})()" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;cursor:pointer;user-select:none">
+        <span style="color:#58a6ff;font-weight:700;font-family:monospace;font-size:11px">🔍 Debug Console</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="event.stopPropagation();document.getElementById('factu-debug-log').innerHTML=''" style="background:none;border:1px solid #30363d;color:#8b949e;border-radius:3px;padding:1px 8px;font-size:10px;cursor:pointer;font-family:monospace">limpiar</button>
+          <span id="factu-debug-arrow" style="color:#58a6ff;font-size:10px;font-family:monospace">▼</span>
+        </div>
       </div>
-      <div id="factu-debug-log" style="color:#8b949e;line-height:1.6"></div>
+      <div id="factu-debug-body" style="display:none;padding:0 12px 10px;font-family:monospace;font-size:11px;max-height:160px;overflow-y:auto">
+        <div id="factu-debug-log" style="color:#8b949e;line-height:1.6"></div>
+      </div>
     </div>
     <!-- Upload zone — solo admin/maestro -->
     <div id="factu-upload-zone" style="display:none">
