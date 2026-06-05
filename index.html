@@ -118,6 +118,19 @@ td:last-child{border-right:none}
 .ib-sched:hover{background:rgba(168,85,247,.3)}
 .ib-hist{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2)}
 .ib-hist:hover{background:rgba(100,116,139,.25);color:var(--tx)}
+/* COMPACT ACTION MENU */
+.acm-wrap{position:relative;display:inline-flex;align-items:center;gap:2px}
+.acm-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:4px;border:1px solid var(--bd);background:var(--sf2);color:var(--tx2);cursor:pointer;font-size:12px;font-weight:700;letter-spacing:1px;transition:all .2s;flex-shrink:0;line-height:1}
+.acm-btn:hover{border-color:var(--ac);color:var(--ac)}
+.acm-drop{display:none;position:fixed;z-index:800;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:4px;min-width:150px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.acm-drop.open{display:block}
+.acm-item{display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:5px;cursor:pointer;font-size:11px;color:var(--tx2);transition:background .15s;white-space:nowrap;border:none;background:transparent;width:100%;text-align:left}
+.acm-item:hover{background:var(--sf2);color:var(--tx)}
+.acm-item.green{color:#4ade80}.acm-item.green:hover{background:rgba(74,222,128,.1)}
+.acm-item.blue{color:#60a5fa}.acm-item.blue:hover{background:rgba(59,130,246,.1)}
+.acm-item.yellow{color:#fbbf24}.acm-item.yellow:hover{background:rgba(234,179,8,.1)}
+.acm-item.wsp{color:#25d366}.acm-item.wsp:hover{background:rgba(37,211,102,.1)}
+.acm-sep{height:1px;background:var(--bd);margin:3px 0}
 /* LOG CANAL BADGES */
 .lc-wsp{background:rgba(37,211,102,.15);color:#25d366;border:1px solid rgba(37,211,102,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
 .lc-mail{background:rgba(59,130,246,.15);color:#60a5fa;border:1px solid rgba(59,130,246,.25);border-radius:4px;padding:1px 6px;font-size:9px;font-family:var(--mo);font-weight:600}
@@ -180,6 +193,15 @@ td:last-child{border-right:none}
 .lista-upload-zone{border:2px dashed var(--bd);border-radius:10px;padding:36px 20px;text-align:center;color:var(--tx3);margin-bottom:12px;cursor:pointer;transition:all .2s}
 .lista-upload-zone:hover,.lista-upload-zone.drag{border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,.03)}
 .lista-upload-zone.drag-rojo{border-color:#f87171;color:#f87171;background:rgba(248,113,113,.03)}
+/* FACTURACIÓN PANEL */
+.factu-upload-box{background:var(--sf);border:2px dashed var(--bd);border-radius:12px;padding:24px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.factu-upload-box:hover,.factu-upload-box.drag{border-color:#34d399;background:rgba(52,211,153,.04)}
+.factu-upload-box.loaded{border-color:#34d399;border-style:solid;background:rgba(52,211,153,.06)}
+.factu-kpi{background:var(--sf);border:1px solid var(--bd);border-radius:9px;padding:14px;transition:border-color .2s}
+.factu-kpi:hover{border-color:var(--ac)}
+.factu-kpi-label{font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.8px;color:var(--tx3);margin-bottom:6px}
+.factu-kpi-val{font-size:20px;font-weight:700;font-family:var(--mo)}
+.factu-kpi-sub{font-size:10px;color:var(--tx3);margin-top:2px}
 .lista-table-wrap{background:var(--sf);border:1px solid var(--bd);border-radius:8px;overflow:auto}
 .lista-table{width:100%;border-collapse:collapse;font-size:11px}
 .lista-table thead tr{background:var(--sf2)}
@@ -520,6 +542,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
       <button class="tab" style="display:none" onclick="switchView('lista',this)">Lista</button>
       <button class="tab" id="buscar-tab" onclick="switchView('buscar',this)">🔍 Buscador</button>
       <button class="tab" id="stats-tab-btn" onclick="switchView('stats',this)">Stats</button>
+      <button class="tab" id="factu-tab-btn" onclick="switchView('factu',this)" style="color:#34d399">💰 Facturación</button>
       <button class="tab om on" id="listaom-tab" onclick="switchView('listaom',this)">&#128217; LISTA OM</button>
       <button class="tab r25" id="listar25-tab" onclick="switchView('listar25',this)">&#128212; LISTA R25</button>
       <button class="tab adm" id="admin-tab" style="display:none" onclick="switchView('admin',this)">Usuarios</button>
@@ -619,6 +642,83 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
   </div>
 </div>
 
+
+<!-- VIEW: FACTURACION Y COBRANZAS -->
+<div id="view-factu" class="view">
+  <div style="padding:20px;max-width:1600px;margin:0 auto">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px">Gerencia de Ventas</div>
+        <div style="font-size:18px;font-weight:900;letter-spacing:-0.5px">💰 Facturación y Cobranzas</div>
+      </div>
+      <div id="factu-period-badge" style="font-size:10px;font-family:var(--mo);color:var(--tx3);background:var(--sf2);border:1px solid var(--bd);border-radius:20px;padding:4px 12px;white-space:nowrap">Sin datos cargados</div>
+    </div>
+    <!-- Upload zone -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+      <div class="factu-upload-box" id="factu-box-f" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'f')" onclick="document.getElementById('factu-inp-f').click()">
+        <input type="file" id="factu-inp-f" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'f')">
+        <div id="factu-icon-f" style="font-size:28px;margin-bottom:6px">📄</div>
+        <div id="factu-label-f" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Facturas</div>
+        <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+        <div id="factu-status-f" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+      </div>
+      <div class="factu-upload-box" id="factu-box-r" ondragover="factuDrag(event,this)" ondragleave="factuDragLeave(this)" ondrop="factuDrop(event,this,'r')" onclick="document.getElementById('factu-inp-r').click()">
+        <input type="file" id="factu-inp-r" accept=".xlsx" style="display:none" onchange="factuLoad(this.files[0],'r')">
+        <div id="factu-icon-r" style="font-size:28px;margin-bottom:6px">💳</div>
+        <div id="factu-label-r" style="font-size:12px;font-weight:600;color:var(--tx2)">Importar Recibos (Cobranzas)</div>
+        <div style="font-size:10px;color:var(--tx3);font-family:var(--mo);margin-top:3px">Arrastrá o hacé clic · .xlsx</div>
+        <div id="factu-status-r" style="font-size:10px;font-family:var(--mo);color:var(--gr);margin-top:5px;min-height:14px"></div>
+      </div>
+    </div>
+    <!-- KPI Summary Cards -->
+    <div id="factu-kpis" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:11px;margin-bottom:18px"></div>
+    <!-- Charts area -->
+    <div id="factu-charts" style="display:none">
+      <!-- Bar chart: Facturacion por vendedor -->
+      <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Acumulado por vendedor</div>
+            <div style="font-size:14px;font-weight:700">Facturación vs. Cobranzas</div>
+          </div>
+          <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mo)">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#34d399;display:inline-block"></span>Facturación</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:#60a5fa;display:inline-block"></span>Cobranzas</span>
+          </div>
+        </div>
+        <div id="factu-bar-chart" style="overflow-x:auto;padding-bottom:4px"></div>
+      </div>
+      <!-- Table: detail per vendor -->
+      <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px;overflow-x:auto">
+        <div style="font-size:14px;font-weight:700;margin-bottom:12px">Detalle por Vendedor</div>
+        <table id="factu-detail-table" style="width:100%;border-collapse:collapse;font-size:12px;min-width:600px">
+          <thead>
+            <tr style="background:var(--sf2);border-bottom:2px solid var(--bd)">
+              <th style="padding:7px 10px;text-align:left;font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:var(--tx3)">Vendedor</th>
+              <th style="padding:7px 10px;text-align:right;font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:#34d399">Facturación</th>
+              <th style="padding:7px 10px;text-align:right;font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:#60a5fa">Cobranzas</th>
+              <th style="padding:7px 10px;text-align:right;font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:var(--tx3)">Diferencia</th>
+              <th style="padding:7px 10px;text-align:right;font-size:9px;font-family:var(--mo);text-transform:uppercase;letter-spacing:.7px;color:var(--tx3)">% Cobranza</th>
+            </tr>
+          </thead>
+          <tbody id="factu-detail-tbody"></tbody>
+        </table>
+      </div>
+      <!-- Timeline chart -->
+      <div style="background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px">
+        <div style="font-size:10px;font-family:var(--mo);color:var(--tx3);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Evolución temporal</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">Facturación diaria acumulada</div>
+        <div id="factu-timeline-chart" style="overflow-x:auto"></div>
+      </div>
+    </div>
+    <div id="factu-empty" style="text-align:center;padding:60px;color:var(--tx3)">
+      <div style="font-size:40px;margin-bottom:10px">📊</div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Importá los archivos para ver los gráficos</div>
+      <div style="font-size:11px;font-family:var(--mo)">Necesitás al menos el listado de facturas. Los recibos son opcionales.</div>
+    </div>
+  </div>
+</div>
 <!-- VIEW: BUSCADOR -->
 <div id="view-buscar" class="view">
   <!-- Hero + search -->
@@ -1304,6 +1404,28 @@ function badge(t){return `<span class="badge ${TB[t]||'b-otro'}">${TS[t]||t}</sp
 function agBadge(id){const a=agendas[id];return a?`<span class="abadge" onclick="openModal('${esc(id)}','${esc(a._nom||'')}')">📅 ${a.fecha}</span>`:''}
 function esc(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
 
+
+// ── Compact Action Menu (dropdown "···") ──────────────────────────────────
+let _acmOpen=null;
+function acmToggle(id,e){
+  e.stopPropagation();
+  const drop=document.getElementById('acmd-'+id);
+  if(!drop)return;
+  if(_acmOpen&&_acmOpen!==drop){_acmOpen.classList.remove('open');}
+  const isOpen=drop.classList.contains('open');
+  drop.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const btn=e.currentTarget;
+    const rect=btn.getBoundingClientRect();
+    drop.style.top=(rect.bottom+4)+'px';
+    drop.style.left=Math.max(4,rect.right-160)+'px';
+    _acmOpen=drop;
+    requestAnimationFrame(()=>{const dw=drop.offsetWidth||160;drop.style.left=Math.max(4,rect.right-dw)+'px';});
+  } else {_acmOpen=null;}
+}
+function acmClose(){if(_acmOpen){_acmOpen.classList.remove('open');_acmOpen=null;}}
+document.addEventListener('click',()=>{acmClose();});
+// ────────────────────────────────────────────────────────────────────────────
 function render(){
   const tb=document.getElementById('tbody'),es=document.getElementById('empty-s');
   updateStats();
@@ -1353,14 +1475,21 @@ function render(){
       <td style="font-size:11px">${r[8]}</td>
       <td title="${r[9]}" style="font-size:11px;color:var(--tx2)">${r[9]}</td>
       <td><span class="nd${nt?'':' emp'}" onclick="editNote('${id}')" title="${nt||''}">${nt||'+ nota…'}</span></td>
-      <td><div class="ag" style="flex-wrap:nowrap">
-        <button class="ib ib-w" title="Log WhatsApp" onclick="omOpenWsp('${id}','${esc(r[1])}')">💬</button>
-        <button class="ib ib-m" title="Log Email" onclick="omOpenMail('${id}','${esc(r[1])}')">✉</button>
+      <td><div class="ag" style="flex-wrap:nowrap;gap:3px">
         <button class="cbtn ${ic?((hasLog(id)?'done locked':'done')):'pend'}" id="cbtn-${id}" onclick="toggleCall('${id}',this)" title="${ic&&hasLog(id)?'Llamado con log — no se puede desmarcar':''}">
-          ${ic?'✓':'☎'} ${ic?'Llamado':'Llamar'}${ic&&hasLog(id)?' 🔒':''}
+          ${ic?'✓':'☎'} ${ic?'Llamado':'LLAMAR'}${ic&&hasLog(id)?' 🔒':''}
         </button>
-        <button class="ib ib-a" onclick="openModal('${esc(id)}','${esc(r[1])}')" title="Reagendar">📅</button>
-        <button class="ib ib-hist" title="Historial de contacto" onclick="omOpenHistorial('${id}','${esc(r[1])}',event)">📋</button>
+        <div class="acm-wrap" id="acm-${id}">
+          <button class="acm-btn" onclick="acmToggle('${id}',event)" title="Más acciones">···</button>
+          <div class="acm-drop" id="acmd-${id}">
+            <button class="acm-item wsp" onclick="acmClose();omOpenWsp('${id}','${esc(r[1])}')">💬 Log WhatsApp</button>
+            <button class="acm-item blue" onclick="acmClose();omOpenMail('${id}','${esc(r[1])}')">✉ Log Email</button>
+            ${tr?`<button class="acm-item wsp" onclick="acmClose();logAction({client_id:'${id}',action:'wsp',client_name:'${r[1].replace(/'/g,"\\'")}' });window.open(buildWspUrl('${r[1].replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${r[3].replace(/'/g,"\\'")}','${r[1].replace(/'/g,"\\'").replace(/"/g,'&quot;')}'),'_blank')">💬 Abrir WhatsApp</button>`:''}
+            <div class="acm-sep"></div>
+            <button class="acm-item yellow" onclick="acmClose();openModal('${esc(id)}','${esc(r[1])}')">📅 Agendar recordatorio</button>
+            <button class="acm-item" onclick="acmClose();omOpenHistorial('${id}','${esc(r[1])}',event)">📋 Ver historial</button>
+          </div>
+        </div>
         <span class="abw" style="min-width:0;overflow:hidden">${agBadge(id)}</span>
         <span class="log-badge-wrap">${renderLogBadge(id)}</span>
       </div></td>
@@ -4516,6 +4645,239 @@ function openUserDetail(name){
     :'<div style="color:var(--tx3);font-size:11px">Sin actividad en el período</div>';
 
   document.getElementById('user-detail-ov').style.display='block';
+}
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// PANEL DE FACTURACIÓN Y COBRANZAS
+// ══════════════════════════════════════════════════════════════════════════════
+const factuState={f:null,r:null}; // f=facturas, r=recibos
+
+function factuDrag(e,el){e.preventDefault();el.classList.add('drag');}
+function factuDragLeave(el){el.classList.remove('drag');}
+function factuDrop(e,el,type){
+  e.preventDefault();el.classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file)factuLoad(file,type);
+}
+
+function factuLoad(file,type){
+  if(!file||!file.name.endsWith('.xlsx')){showToast('Solo se aceptan archivos .xlsx');return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      factuState[type]=rows;
+      const box=document.getElementById('factu-box-'+type);
+      box.classList.add('loaded');
+      box.classList.remove('drag');
+      const icon=type==='f'?'✅':'✅';
+      document.getElementById('factu-icon-'+type).textContent=icon;
+      document.getElementById('factu-label-'+type).textContent=file.name;
+      document.getElementById('factu-status-'+type).textContent=rows.length+' registros cargados';
+      factuRender();
+    }catch(err){showToast('Error al leer el archivo: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function factuFmt(n){
+  if(n==null||isNaN(n))return '$0';
+  const abs=Math.abs(n);
+  let s;
+  if(abs>=1e9)s='$'+(abs/1e9).toFixed(2)+' B';
+  else if(abs>=1e6)s='$'+(abs/1e6).toFixed(2)+' M';
+  else s='$'+Math.round(abs).toLocaleString('es-AR');
+  return (n<0?'-':'')+s;
+}
+
+function parseVendName(v){
+  if(!v)return 'Sin asignar';
+  return String(v).replace(/^\d+-/,'').trim()||'Sin asignar';
+}
+
+function factuRender(){
+  const fRows=factuState.f||[];
+  const rRows=factuState.r||[];
+  if(!fRows.length&&!rRows.length)return;
+
+  document.getElementById('factu-empty').style.display='none';
+  document.getElementById('factu-charts').style.display='block';
+
+  // ── Aggregate by vendor ──────────────────────────────────────────────────
+  const fByVend={},rByVend={},fByDay={},rByDay={};
+  let totalF=0,totalR=0,fMin='',fMax='',rMin='',rMax='';
+
+  fRows.forEach(row=>{
+    const vend=parseVendName(row.VENDEDOR);
+    const amt=parseFloat(row.LRETOT)||0;
+    fByVend[vend]=(fByVend[vend]||0)+amt;
+    totalF+=amt;
+    // Day
+    let d=row.REMFEC;
+    if(d instanceof Date)d=d.toISOString().slice(0,10);
+    else if(d)d=String(d).slice(0,10);
+    if(d&&d.length===10){
+      fByDay[d]=(fByDay[d]||0)+amt;
+      if(!fMin||d<fMin)fMin=d;
+      if(!fMax||d>fMax)fMax=d;
+    }
+  });
+
+  rRows.forEach(row=>{
+    const vend=parseVendName(row.VENDEDOR);
+    const amt=parseFloat(row.IMP)||0;
+    rByVend[vend]=(rByVend[vend]||0)+amt;
+    totalR+=amt;
+    let d=row.FEC;
+    if(d instanceof Date)d=d.toISOString().slice(0,10);
+    else if(d)d=String(d).slice(0,10);
+    if(d&&d.length===10){
+      rByDay[d]=(rByDay[d]||0)+amt;
+      if(!rMin||d<rMin)rMin=d;
+      if(!rMax||d>rMax)rMax=d;
+    }
+  });
+
+  // Period badge
+  const pMin=[fMin,rMin].filter(Boolean).sort()[0]||'';
+  const pMax=[fMax,rMax].filter(Boolean).sort().reverse()[0]||'';
+  const badge=document.getElementById('factu-period-badge');
+  if(pMin&&pMax){
+    const fmt=d=>d?new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'?';
+    badge.textContent=fmt(pMin)+' → '+fmt(pMax);
+  }
+
+  // ── KPI Cards ──────────────────────────────────────────────────────────
+  const kpis=document.getElementById('factu-kpis');
+  const diff=totalF-totalR;
+  const pct=totalF>0?Math.round(totalR/totalF*100):0;
+  const nVendF=Object.keys(fByVend).length;
+  const nVendR=Object.keys(rByVend).length;
+  kpis.innerHTML=[
+    {label:'Total Facturado',val:factuFmt(totalF),sub:nVendF+' vendedores',col:'#34d399'},
+    {label:'Total Cobrado',val:factuFmt(totalR),sub:nVendR+' vendedores',col:'#60a5fa'},
+    {label:'Diferencia (Fctu-Cobr)',val:factuFmt(diff),sub:diff>=0?'Pendiente de cobro':'Cobrado > Facturado',col:diff>=0?'#fbbf24':'#f87171'},
+    {label:'% de Cobranza',val:pct+'%',sub:'sobre total facturado',col:pct>=80?'#34d399':pct>=50?'#fbbf24':'#f87171'},
+    {label:'Registros Facturación',val:fRows.length.toLocaleString('es'),sub:'filas importadas',col:'var(--ac)'},
+    {label:'Registros Cobranzas',val:rRows.length.toLocaleString('es'),sub:'filas importadas',col:'var(--ac)'},
+  ].map(k=>`<div class="factu-kpi">
+    <div class="factu-kpi-label">${k.label}</div>
+    <div class="factu-kpi-val" style="color:${k.col}">${k.val}</div>
+    <div class="factu-kpi-sub">${k.sub}</div>
+  </div>`).join('');
+
+  // ── Bar Chart: Facturación vs Cobranzas por vendedor ──────────────────
+  const allVends=[...new Set([...Object.keys(fByVend),...Object.keys(rByVend)])];
+  // Sort by facturacion desc
+  allVends.sort((a,b)=>(fByVend[b]||0)-(fByVend[a]||0));
+  const maxVal=Math.max(1,...allVends.map(v=>Math.max(fByVend[v]||0,rByVend[v]||0)));
+  const BAR_H=28,GAP=8,LABEL_W=160;
+
+  const chartH=allVends.length*(BAR_H*2+GAP+10)+40;
+  let svgRows='';
+  allVends.forEach((vend,i)=>{
+    const yBase=i*(BAR_H*2+GAP+10)+20;
+    const wF=Math.round((fByVend[vend]||0)/maxVal*100);
+    const wR=Math.round((rByVend[vend]||0)/maxVal*100);
+    const pctCob=fByVend[vend]>0?Math.round((rByVend[vend]||0)/(fByVend[vend]||1)*100):0;
+    svgRows+=`
+      <text x="${LABEL_W-6}" y="${yBase+BAR_H/2+4}" text-anchor="end" font-size="10" fill="var(--tx2)" font-family="var(--mo)">${vend.length>22?vend.slice(0,21)+'…':vend}</text>
+      <rect x="${LABEL_W}" y="${yBase}" width="${wF+'%'}" height="${BAR_H}" rx="3" fill="#34d399" opacity=".85"/>
+      <text x="${LABEL_W+4+wF*4}" y="${yBase+BAR_H/2+4}" font-size="9" fill="#34d399" font-family="var(--mo)">${factuFmt(fByVend[vend]||0)}</text>
+      <rect x="${LABEL_W}" y="${yBase+BAR_H+3}" width="${wR+'%'}" height="${BAR_H}" rx="3" fill="#60a5fa" opacity=".8"/>
+      <text x="${LABEL_W+4+wR*4}" y="${yBase+BAR_H+3+BAR_H/2+4}" font-size="9" fill="#60a5fa" font-family="var(--mo)">${factuFmt(rByVend[vend]||0)} (${pctCob}%)</text>
+    `;
+  });
+
+  // Use canvas-based bar chart for better responsiveness
+  const barsHtml=allVends.map(vend=>{
+    const fv=fByVend[vend]||0;
+    const rv=rByVend[vend]||0;
+    const wF=Math.round(fv/maxVal*100);
+    const wR=Math.round(rv/maxVal*100);
+    const pctCob=fv>0?Math.round(rv/fv*100):0;
+    const pctColor=pctCob>=80?'#34d399':pctCob>=50?'#fbbf24':'#f87171';
+    return `<div style="display:grid;grid-template-columns:160px 1fr auto;gap:8px;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;font-family:var(--mo);color:var(--tx2);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${vend}">${vend.length>20?vend.slice(0,19)+'…':vend}</div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:14px;background:var(--bd);border-radius:3px;overflow:hidden">
+            <div style="width:${wF}%;height:100%;background:#34d399;border-radius:3px;transition:width .5s"></div>
+          </div>
+          <span style="font-size:9px;font-family:var(--mo);color:#34d399;width:90px;flex-shrink:0">${factuFmt(fv)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:14px;background:var(--bd);border-radius:3px;overflow:hidden">
+            <div style="width:${wR}%;height:100%;background:#60a5fa;border-radius:3px;transition:width .5s"></div>
+          </div>
+          <span style="font-size:9px;font-family:var(--mo);color:#60a5fa;width:90px;flex-shrink:0">${factuFmt(rv)}</span>
+        </div>
+      </div>
+      <div style="font-size:10px;font-family:var(--mo);color:${pctColor};font-weight:700;width:42px;text-align:right">${pctCob}%</div>
+    </div>`;
+  }).join('');
+  document.getElementById('factu-bar-chart').innerHTML=barsHtml;
+
+  // ── Detail Table ───────────────────────────────────────────────────────
+  const tbody=document.getElementById('factu-detail-tbody');
+  tbody.innerHTML=allVends.map(vend=>{
+    const fv=fByVend[vend]||0;
+    const rv=rByVend[vend]||0;
+    const diff=fv-rv;
+    const pctCob=fv>0?Math.round(rv/fv*100):0;
+    const diffCol=diff>=0?'#fbbf24':'#f87171';
+    const pctCol=pctCob>=80?'#34d399':pctCob>=50?'#fbbf24':'#f87171';
+    return `<tr style="border-bottom:1px solid rgba(42,48,72,.5)">
+      <td style="padding:6px 10px;font-size:11px;color:var(--tx)">${vend}</td>
+      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:#34d399">${factuFmt(fv)}</td>
+      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:#60a5fa">${factuFmt(rv)}</td>
+      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:${diffCol}">${factuFmt(diff)}</td>
+      <td style="padding:6px 10px;font-size:11px;font-family:var(--mo);text-align:right;color:${pctCol}">${pctCob}%</td>
+    </tr>`;
+  }).join('');
+
+  // ── Timeline: daily accumulated facturación ────────────────────────────
+  // Build date range
+  const allDays=new Set([...Object.keys(fByDay),...Object.keys(rByDay)]);
+  const sortedDays=[...allDays].sort();
+  if(sortedDays.length>0){
+    let cumF=0,cumR=0;
+    const points=sortedDays.map(d=>{
+      cumF+=fByDay[d]||0;
+      cumR+=rByDay[d]||0;
+      return {d,cumF,cumR};
+    });
+    const maxCum=Math.max(1,...points.map(p=>Math.max(p.cumF,p.cumR)));
+    const barW=Math.max(6,Math.min(40,Math.floor(760/Math.max(points.length,1))-3));
+    const step=points.length>20?Math.ceil(points.length/10):1;
+
+    const tlHtml=`<div style="display:flex;align-items:flex-end;gap:2px;height:80px;padding-bottom:0">
+      ${points.map((p,i)=>{
+        const hF=Math.max(2,Math.round(p.cumF/maxCum*70));
+        const hR=Math.max(2,Math.round(p.cumR/maxCum*70));
+        const isLast=i===points.length-1;
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;width:${barW}px" title="${p.d}\nFacturación: ${factuFmt(p.cumF)}\nCobranzas: ${factuFmt(p.cumR)}">
+          <div style="width:${Math.max(2,barW-2)}px;height:${hF}px;background:#34d399;border-radius:2px 2px 0 0;opacity:.8${isLast?';outline:1px solid var(--ac)':''}"></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:2px;margin-top:3px">
+      ${points.map((p,i)=>{
+        const show=(i%step===0)||i===points.length-1;
+        const label=show?new Date(p.d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
+        return `<div style="font-size:8px;font-family:var(--mo);color:var(--tx3);flex-shrink:0;width:${barW}px;text-align:center;overflow:hidden">${label}</div>`;
+      }).join('')}
+    </div>
+    <div style="margin-top:8px;font-size:10px;font-family:var(--mo);color:var(--tx3)">
+      Acumulado final — Facturación: <strong style="color:#34d399">${factuFmt(points[points.length-1].cumF)}</strong>
+      &nbsp;·&nbsp; Cobranzas: <strong style="color:#60a5fa">${factuFmt(points[points.length-1].cumR)}</strong>
+    </div>`;
+    document.getElementById('factu-timeline-chart').innerHTML=tlHtml;
+  }
 }
 </script>
 
