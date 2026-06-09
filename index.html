@@ -88,6 +88,21 @@ th:hover{color:var(--ac)}
 tbody tr{border-bottom:1px solid rgba(42,48,72,.6);transition:background .1s}
 tbody tr:hover{background:var(--sf2)}
 tbody tr.called{opacity:.35}
+/* Contact status highlight */
+tbody tr.has-contact{border-left:3px solid rgba(34,197,94,.45)}
+tbody tr.has-contact td:first-child{position:relative}
+tbody tr.no-contact-highlight{border-left:3px solid rgba(255,214,0,.5);background:rgba(255,214,0,.03)}
+tbody tr.no-contact-highlight:hover{background:rgba(255,214,0,.07)!important}
+.contact-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;flex-shrink:0}
+.contact-dot.green{background:var(--gr)}
+.contact-dot.yellow{background:var(--ac)}
+.contact-dot.gray{background:var(--tx3)}
+.contact-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-family:var(--mo);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.contact-badge.contacted{background:rgba(34,197,94,.12);color:#86efac;border:1px solid rgba(34,197,94,.25)}
+.contact-badge.not-contacted{background:rgba(255,214,0,.12);color:#fde68a;border:1px solid rgba(255,214,0,.25)}
+/* Contact highlight toggle */
+#contact-highlight-toggle{background:transparent;border:1px solid var(--bd);border-radius:5px;padding:4px 9px;font-size:10px;cursor:pointer;transition:all .2s;font-family:var(--mo);color:var(--tx3)}
+#contact-highlight-toggle.on{border-color:var(--gr);color:var(--gr);background:rgba(34,197,94,.08)}
 td{padding:5px 7px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-right:1px solid rgba(42,48,72,.35);vertical-align:middle}
 td:last-child{border-right:none}
 /* col widths */
@@ -582,6 +597,7 @@ tbody tr.pinned td:first-child::before{content:'▶';color:var(--ac);font-size:9
     <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
       <button class="btn-g" onclick="resetFilters()">↺ Limpiar</button>
       <button class="btn" onclick="exportCSV()">⬇ CSV</button>
+      <button id="contact-highlight-toggle" onclick="toggleContactHighlight()" title="Resaltar clientes no contactados">● Resaltar no contactados</button>
     </div>
   </div>
   <div class="rbar">
@@ -1237,6 +1253,7 @@ const ROWS=RAW.rows;
 const PG=50;
 let filtered=[],page=1,scol=-1,sdir=1;
 let called={},notes={},agendas={};
+let contactHighlightOn=false;
 let currentUser=null,currentRole='';
 let modalId=null,modalNom='';
 let editUserId=null,pwTargetId=null;
@@ -1474,6 +1491,15 @@ function sortBy(col){
   document.getElementById('s'+col).textContent=sdir===1?' ↑':' ↓';
   doSort();page=1;render();
 }
+async function toggleContactHighlight(){
+  contactHighlightOn=!contactHighlightOn;
+  const btn=document.getElementById('contact-highlight-toggle');
+  if(btn){btn.classList.toggle('on',contactHighlightOn);btn.textContent=contactHighlightOn?'● Resaltar activo':'● Resaltar no contactados';}
+  // Ensure logs are loaded before rendering
+  if(contactHighlightOn&&!callLogsLoaded)await loadCallLogs();
+  renderTable();
+}
+
 function resetFilters(){
   ['search','f-tipo','f-vend','f-prov','f-loc','f-tel','f-mail'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('f-pend').checked=false;syncLocs();
@@ -1522,6 +1548,8 @@ function render(){
   document.getElementById('showing-t').textContent=tot.toLocaleString('es');
   tb.innerHTML=sl.map(r=>{
     const id=r[0],ic=!!called[id],nt=notes[id]||'';
+    const hasAnyContact=ic||hasLog(id);
+    const highlightClass=contactHighlightOn&&!ic&&!hasLog(id)&&!!(r[3]||r[4])?'no-contact-highlight':(contactHighlightOn&&hasAnyContact?'has-contact':'');
     const tr=(r[3]||'').replace(/\D/g,'');
     const wa=tr?(tr.startsWith('54')?tr:'54'+tr.replace(/^0/,'')):'';
     const tD=r[3]
@@ -1547,9 +1575,10 @@ function render(){
       <td title="${r[9]}" style="font-size:11px;color:var(--tx2)">${r[9]}</td>
       <td></td><td></td>
     </tr>`;
-    return `<tr class="${ic?'called':''}" id="row-${id}" onclick="pinRow('${id}',event)">
+    return `<tr class="${ic?'called':highlightClass}" id="row-${id}" onclick="pinRow('${id}',event)">
       <td style="font-family:var(--mo);font-size:10px;color:var(--tx3)">${id}</td>
-      <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}</td>
+      <td title="${r[1]}"><strong style="font-size:11px">${r[1]}</strong>${ct}${contactHighlightOn?`<br><span class="contact-badge ${hasAnyContact?'contacted':'not-contacted'}">${hasAnyContact?'✓ contactado':'⚡ sin contacto'}</span>`:''}
+      </td>
       <td>${badge(r[2])}</td>
       <td><div class="ag">${tD}${r[3]?editTelBtn:''}${wB}</div></td>
       <td><div class="ag">${eD}${r[4]?editEmailBtn:''}${mB}</div></td>
@@ -1583,7 +1612,10 @@ function render(){
 function patchRow(id){
   const row=document.getElementById('row-'+id);if(!row)return;
   const ic=!!called[id];
-  if(ic)row.classList.add('called');else row.classList.remove('called');
+  if(ic){row.className='called';}else{
+    const hasAnyContact=hasLog(id);
+    row.className=contactHighlightOn&&!hasAnyContact?'no-contact-highlight':(contactHighlightOn&&hasAnyContact?'has-contact':'');
+  }
   const btn=document.getElementById('cbtn-'+id);
   if(btn){
     const locked=ic&&hasLog(id);
@@ -2853,6 +2885,8 @@ async function loadCallLogs(){
       if(!callLogs[log.client_id])callLogs[log.client_id]=[];
       callLogs[log.client_id].push(log);
     });
+    // If contact highlight is active, re-render to show correct status
+    if(contactHighlightOn)renderTable();
   }catch(e){console.warn('loadCallLogs:',e);}
 }
 
